@@ -60,11 +60,9 @@ class CatalogService:
                 response = await client.post(url, json=payload)
 
             if response.status_code != 200:
-                logger.error(f"Gemini Catalog API error ({response.status_code}): {response.text}")
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Catalog generation error: Status {response.status_code} from Gemini API.",
-                )
+                logger.warning(f"Gemini Catalog API status ({response.status_code}). Using offline catalog generator.")
+                return self._offline_fallback_catalog(vision_analysis)
+
 
             data = response.json()
             raw_text = (
@@ -114,11 +112,9 @@ class CatalogService:
                 response = await client.post(url, headers=headers, json=payload)
 
             if response.status_code != 200:
-                logger.error(f"OpenAI Catalog API error ({response.status_code}): {response.text}")
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Catalog generation error: Status {response.status_code} from OpenAI API.",
-                )
+                logger.warning(f"OpenAI Catalog API status ({response.status_code}). Using offline catalog generator.")
+                return self._offline_fallback_catalog(vision_analysis)
+
 
             data = response.json()
             raw_text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()

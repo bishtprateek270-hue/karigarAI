@@ -30,23 +30,20 @@ class VisionService:
         Main entry point for image analysis.
         Uses Gemini Vision API if GEMINI_API_KEY is configured.
         Falls back to OpenAI Vision API if OPENAI_API_KEY is configured.
-        Uses PIL pixel color and feature analysis fallback if no API key is provided in .env.
+        Uses PIL pixel color and feature analysis fallback if no API key or on quota errors.
         """
         gemini_key = settings.GEMINI_API_KEY
         openai_key = settings.OPENAI_API_KEY
 
         if gemini_key and gemini_key != "your_gemini_api_key_here":
-            return await self._analyze_with_gemini(file_bytes, content_type, gemini_key)
+            return await self._analyze_with_gemini(file_bytes, filename, content_type, gemini_key)
         elif openai_key and openai_key != "your_openai_api_key_here":
-            return await self._analyze_with_openai(file_bytes, content_type, openai_key)
+            return await self._analyze_with_openai(file_bytes, filename, content_type, openai_key)
         else:
             logger.info("No active Vision API key found in .env. Performing smart PIL image feature analysis.")
             return self._offline_image_feature_analysis(file_bytes, filename)
 
-    async def _analyze_with_gemini(self, file_bytes: bytes, content_type: str, api_key: str) -> Dict[str, Any]:
-        """
-        Calls Google Gemini Vision REST API.
-        """
+    async def _analyze_with_gemini(self, file_bytes: bytes, filename: str, content_type: str, api_key: str) -> Dict[str, Any]:
         b64_image = base64.b64encode(file_bytes).decode("utf-8")
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={api_key}"
 
@@ -74,11 +71,8 @@ class VisionService:
                 response = await client.post(url, json=payload)
 
             if response.status_code != 200:
-                logger.error(f"Gemini API error ({response.status_code}): {response.text}")
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Vision AI service error: Received status {response.status_code} from Gemini API.",
-                )
+                logger.warning(f"Gemini API status ({response.status_code}). Using smart PIL feature analyzer fallback.")
+                return self._offline_image_feature_analysis(file_bytes, filename)
 
             data = response.json()
             raw_text = (
@@ -91,19 +85,11 @@ class VisionService:
 
             return self._parse_json_response(raw_text)
 
-        except HTTPException:
-            raise
         except Exception as e:
-            logger.error(f"Gemini API request failed: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Failed to communicate with Gemini Vision AI service: {str(e)}",
-            )
+            logger.warning(f"Gemini API request failed ({e}). Using smart PIL feature analyzer fallback.")
+            return self._offline_image_feature_analysis(file_bytes, filename)
 
-    async def _analyze_with_openai(self, file_bytes: bytes, content_type: str, api_key: str) -> Dict[str, Any]:
-        """
-        Calls OpenAI Vision REST API.
-        """
+    async def _analyze_with_openai(self, file_bytes: bytes, filename: str, content_type: str, api_key: str) -> Dict[str, Any]:
         b64_image = base64.b64encode(file_bytes).decode("utf-8")
         url = "https://api.openai.com/v1/chat/completions"
 
@@ -136,29 +122,18 @@ class VisionService:
                 response = await client.post(url, headers=headers, json=payload)
 
             if response.status_code != 200:
-                logger.error(f"OpenAI API error ({response.status_code}): {response.text}")
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Vision AI service error: Received status {response.status_code} from OpenAI API.",
-                )
+                logger.warning(f"OpenAI API status ({response.status_code}). Using smart PIL feature analyzer fallback.")
+                return self._offline_image_feature_analysis(file_bytes, filename)
 
             data = response.json()
             raw_text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
             return self._parse_json_response(raw_text)
 
-        except HTTPException:
-            raise
         except Exception as e:
-            logger.error(f"OpenAI API request failed: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Failed to communicate with OpenAI Vision AI service: {str(e)}",
-            )
+            logger.warning(f"OpenAI API request failed ({e}). Using smart PIL feature analyzer fallback.")
+            return self._offline_image_feature_analysis(file_bytes, filename)
 
     def _parse_json_response(self, raw_text: str) -> Dict[str, Any]:
-        """
-        Parses and validates the 5 required fields from AI JSON response.
-        """
         clean_text = raw_text.replace("```json", "").replace("```", "").strip()
         try:
             parsed = json.loads(clean_text)
@@ -187,10 +162,6 @@ class VisionService:
         }
 
     def _offline_image_feature_analysis(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
-        """
-        Extracts image feature heuristics using PIL (color palette, aspect ratio, keywords)
-        when no external LLM key is configured in .env.
-        """
         fn_lower = filename.lower()
 
         # Image color sampling via PIL
