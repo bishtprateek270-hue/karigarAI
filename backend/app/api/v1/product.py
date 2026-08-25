@@ -10,8 +10,8 @@ router = APIRouter()
     "/analyze-product",
     response_model=ProductAnalysisResponse,
     status_code=status.HTTP_200_OK,
-    summary="Analyze Product Image",
-    description="Upload a product image (.jpg, .jpeg, .png) up to 10MB for Vision AI analysis.",
+    summary="Analyze Product & Generate Catalog",
+    description="Upload a product image (.jpg, .jpeg, .png) up to 10MB to extract Vision AI features and generate a marketplace catalog.",
 )
 async def analyze_product_endpoint(file: UploadFile = File(...)):
     file_bytes = await validate_image_file(file)
@@ -27,4 +27,5 @@ async def analyze_product_endpoint(file: UploadFile = File(...)):
         filename=result["filename"],
         content_type=result["content_type"],
         analysis=result["analysis"],
+        catalog=result["catalog"],
     )

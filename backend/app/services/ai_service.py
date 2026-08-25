@@ -1,9 +1,10 @@
 """
 AI Service module for KarigarAI.
-Delegates image analysis to VisionService.
+Orchestrates image analysis (VisionService) and catalog generation (CatalogService).
 """
 from typing import Dict, Any
 from app.services.vision_service import vision_service
+from app.services.catalog_service import catalog_service
 
 
 class AIService:
@@ -11,19 +12,23 @@ class AIService:
         self, file_bytes: bytes, filename: str, content_type: str
     ) -> Dict[str, Any]:
         """
-        Analyzes the uploaded craft/artisan product image using Vision AI.
+        1. Analyzes product image using Vision AI (VisionService).
+        2. Automatically generates marketplace catalog entry (CatalogService) using Vision AI output.
         """
-        analysis_data = await vision_service.analyze_image(
+        vision_analysis = await vision_service.analyze_image(
             file_bytes=file_bytes,
             filename=filename,
             content_type=content_type,
         )
 
+        catalog_details = await catalog_service.generate_catalog(vision_analysis)
+
         return {
             "status": "success",
             "filename": filename,
             "content_type": content_type,
-            "analysis": analysis_data,
+            "analysis": vision_analysis,
+            "catalog": catalog_details,
         }
 
 
