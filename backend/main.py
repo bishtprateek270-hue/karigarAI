@@ -2,8 +2,10 @@ from fastapi import FastAPI, File, UploadFile, status
 from app.core.config import settings
 from app.api.v1 import api_v1_router
 from app.models.product import ProductAnalysisResponse
+from app.models.price import PriceRequest, PriceResponse
 from app.utils.file_validation import validate_image_file
 from app.services.ai_service import ai_service
+from app.services.price_service import price_service
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -42,6 +44,18 @@ async def analyze_product_root(file: UploadFile = File(...)):
         analysis=result["analysis"],
         catalog=result["catalog"],
     )
+
+
+@app.post(
+    "/suggest-price",
+    response_model=PriceResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["Pricing Engine"],
+    summary="Suggest Product Price",
+    description="Calculates rule-based, explainable price recommendations (minimum, recommended, maximum) for artisan crafts.",
+)
+async def suggest_price_root(request: PriceRequest):
+    return price_service.calculate_price(request)
 
 
 if __name__ == "__main__":
