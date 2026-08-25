@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
@@ -18,25 +18,27 @@ const HomeRedirect = () => {
 };
 
 function App() {
+  const [currentLang, setCurrentLang] = useState('en');
+
   return (
     <AuthProvider>
       <BrowserRouter>
         <div className="app-container">
-          <Navbar />
+          <Navbar currentLang={currentLang} onLangChange={setCurrentLang} />
           <main className="main-content">
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<HomeRedirect />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<Login lang={currentLang} />} />
+              <Route path="/register" element={<Register lang={currentLang} />} />
 
               {/* Protected Artisan Routes */}
               <Route element={<ProtectedRoute />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/add-product" element={<AddProduct />} />
-                <Route path="/my-products" element={<MyProducts />} />
-                <Route path="/products/:id" element={<ProductDetails />} />
-                <Route path="/edit-product/:id" element={<EditProduct />} />
+                <Route path="/dashboard" element={<Dashboard lang={currentLang} />} />
+                <Route path="/add-product" element={<AddProduct lang={currentLang} />} />
+                <Route path="/my-products" element={<MyProducts lang={currentLang} />} />
+                <Route path="/products/:id" element={<ProductDetails lang={currentLang} />} />
+                <Route path="/edit-product/:id" element={<EditProduct lang={currentLang} />} />
               </Route>
 
               {/* Fallback Catch-All */}

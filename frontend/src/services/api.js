@@ -74,6 +74,22 @@ export const api = {
     return handleResponse(res);
   },
 
+  // Multilingual Translation API
+  async translate(catalogData, targetLanguage = 'hi') {
+    const res = await fetch(`${API_BASE_URL}/translate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({
+        ...catalogData,
+        target_language: targetLanguage,
+      }),
+    });
+    return handleResponse(res);
+  },
+
   // Product CRUD API
   async createProduct(productData) {
     const res = await fetch(`${API_BASE_URL}/products`, {

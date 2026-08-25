@@ -31,7 +31,14 @@ class Product(Base):
     category = Column(String(100), nullable=True)
     material = Column(String(100), nullable=True)
     craft_type = Column(String(100), nullable=True)
-    tags = Column(Text, nullable=True)  # Comma-separated or JSON list string
+    tags = Column(Text, nullable=True)
+
+    # Multilingual (Hindi) Content Storage
+    title_hi = Column(String(255), nullable=True)
+    description_hi = Column(Text, nullable=True)
+    category_hi = Column(String(100), nullable=True)
+    tags_hi = Column(Text, nullable=True)
+
     suggested_price = Column(Float, nullable=True)
     status = Column(String(50), default="active", nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)

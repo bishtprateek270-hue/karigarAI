@@ -45,6 +45,10 @@ def _to_product_response(product: Product) -> ProductDBResponse:
         material=product.material,
         craft_type=product.craft_type,
         tags=_parse_tags_output(product.tags),
+        title_hi=product.title_hi,
+        description_hi=product.description_hi,
+        category_hi=product.category_hi,
+        tags_hi=_parse_tags_output(product.tags_hi),
         suggested_price=product.suggested_price,
         status=product.status,
         created_at=product.created_at,
@@ -56,7 +60,7 @@ def _to_product_response(product: Product) -> ProductDBResponse:
     response_model=ProductDBResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create product",
-    description="Creates a new product catalog entry for the authenticated user.",
+    description="Creates a new product catalog entry (supporting both English and Hindi details) for the authenticated user.",
 )
 def create_product(
     req: ProductCreateRequest,
@@ -71,6 +75,10 @@ def create_product(
         material=req.material,
         craft_type=req.craft_type,
         tags=_format_tags_input(req.tags),
+        title_hi=req.title_hi.strip() if req.title_hi else None,
+        description_hi=req.description_hi,
+        category_hi=req.category_hi,
+        tags_hi=_format_tags_input(req.tags_hi),
         suggested_price=req.suggested_price,
         image_url=req.image_url,
         status=req.status or "active",
@@ -157,6 +165,8 @@ def update_user_product(
     update_data = req.model_dump(exclude_unset=True)
     if "tags" in update_data:
         update_data["tags"] = _format_tags_input(update_data["tags"])
+    if "tags_hi" in update_data:
+        update_data["tags_hi"] = _format_tags_input(update_data["tags_hi"])
 
     for key, value in update_data.items():
         setattr(product, key, value)

@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import List
 from fastapi import FastAPI, File, UploadFile, Depends, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -18,11 +19,13 @@ from app.models.product_db import (
     ProductUpdateRequest,
     ProductDBResponse,
 )
+from app.models.language import TranslationRequest, TranslationResponse
 
 # Services & Router Functions
 from app.utils.file_validation import validate_image_file
 from app.services.ai_service import ai_service
 from app.services.price_service import price_service
+from app.services.language_service import language_service
 from app.api.v1.auth import register_user, login_user
 from app.api.v1.products_crud import (
     create_product,
@@ -35,12 +38,9 @@ from app.api.v1.products_crud import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Initialize Database Tables
     init_db()
     yield
 
-
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -49,7 +49,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Enable CORS for frontend integration
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -58,12 +58,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Include API v1 router
 app.include_router(api_v1_router, prefix=settings.API_V1_STR)
 
 
-# --- Core & Legacy Phase Endpoints ---
+# --- Core & Legacy Endpoints ---
 
 
 @app.get("/health", tags=["Health"])
@@ -77,7 +76,6 @@ async def health_check():
     status_code=status.HTTP_200_OK,
     tags=["Product Analysis"],
     summary="Analyze Product Image & Generate Catalog",
-    description="Upload a product image (.jpg, .jpeg, .png) up to 10MB to extract Vision AI features and generate a marketplace catalog.",
 )
 async def analyze_product_root(file: UploadFile = File(...)):
     file_bytes = await validate_image_file(file)
@@ -101,13 +99,39 @@ async def analyze_product_root(file: UploadFile = File(...)):
     status_code=status.HTTP_200_OK,
     tags=["Pricing Engine"],
     summary="Suggest Product Price",
-    description="Calculates rule-based, explainable price recommendations (minimum, recommended, maximum) for artisan crafts.",
 )
 async def suggest_price_root(request: PriceRequest):
     return price_service.calculate_price(request)
 
 
-# --- Phase 6 Authentication & User Endpoints ---
+# --- Phase 8 Multilingual Translation Endpoint ---
+
+
+@app.post(
+    "/translate",
+    response_model=TranslationResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["Multilingual Translation"],
+    summary="Translate Catalog Content",
+)
+async def translate_root(req: TranslationRequest):
+    translated = await language_service.translate_catalog(
+        title=req.title,
+        description=req.description,
+        category=req.category,
+        tags=req.tags,
+        target_language=req.target_language,
+    )
+    return TranslationResponse(
+        title=translated.get("title"),
+        description=translated.get("description"),
+        category=translated.get("category"),
+        tags=translated.get("tags"),
+        target_language=req.target_language,
+    )
+
+
+# --- Phase 6 Authentication & Product CRUD Endpoints ---
 
 
 @app.post(
@@ -115,7 +139,6 @@ async def suggest_price_root(request: PriceRequest):
     response_model=TokenResponse,
     status_code=status.HTTP_201_CREATED,
     tags=["Authentication"],
-    summary="Register user",
 )
 def register_root(req: UserRegisterRequest, db: Session = Depends(get_db)):
     return register_user(req, db)
@@ -126,13 +149,9 @@ def register_root(req: UserRegisterRequest, db: Session = Depends(get_db)):
     response_model=TokenResponse,
     status_code=status.HTTP_200_OK,
     tags=["Authentication"],
-    summary="Login user",
 )
 def login_root(req: UserLoginRequest, db: Session = Depends(get_db)):
     return login_user(req, db)
-
-
-# --- Phase 6 Protected Product CRUD Endpoints ---
 
 
 @app.post(
@@ -140,7 +159,6 @@ def login_root(req: UserLoginRequest, db: Session = Depends(get_db)):
     response_model=ProductDBResponse,
     status_code=status.HTTP_201_CREATED,
     tags=["Product CRUD"],
-    summary="Create Product",
 )
 def create_product_root(
     req: ProductCreateRequest,
@@ -155,7 +173,6 @@ def create_product_root(
     response_model=List[ProductDBResponse],
     status_code=status.HTTP_200_OK,
     tags=["Product CRUD"],
-    summary="List User Products",
 )
 def list_products_root(
     current_user: User = Depends(get_current_user),
@@ -169,7 +186,6 @@ def list_products_root(
     response_model=ProductDBResponse,
     status_code=status.HTTP_200_OK,
     tags=["Product CRUD"],
-    summary="Get Product by ID",
 )
 def get_product_root(
     product_id: int,
@@ -184,7 +200,6 @@ def get_product_root(
     response_model=ProductDBResponse,
     status_code=status.HTTP_200_OK,
     tags=["Product CRUD"],
-    summary="Update Product",
 )
 def update_product_root(
     product_id: int,
@@ -199,7 +214,6 @@ def update_product_root(
     "/products/{product_id}",
     status_code=status.HTTP_200_OK,
     tags=["Product CRUD"],
-    summary="Delete Product",
 )
 def delete_product_root(
     product_id: int,

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, CheckCircle, Tag } from 'lucide-react';
+import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, CheckCircle, Languages, Globe } from 'lucide-react';
 
-export const AddProduct = () => {
+export const AddProduct = ({ lang = 'en' }) => {
   const navigate = useNavigate();
 
   // Step 1: File & Preview State
@@ -15,11 +15,23 @@ export const AddProduct = () => {
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [error, setError] = useState('');
 
-  // Step 3: Editable Catalog Form State
+  // Step 3: Editable Catalog Form State (English & Hindi)
+  const [activeTabLang, setActiveTabLang] = useState(lang);
+  const [translating, setTranslating] = useState(false);
+
+  // English Catalog State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [tags, setTags] = useState('');
+
+  // Hindi Catalog State
+  const [titleHi, setTitleHi] = useState('');
+  const [descriptionHi, setDescriptionHi] = useState('');
+  const [categoryHi, setCategoryHi] = useState('');
+  const [tagsHi, setTagsHi] = useState('');
+
+  // Shared Common Product Properties
   const [material, setMaterial] = useState('');
   const [craftType, setCraftType] = useState('');
   const [status, setStatus] = useState('published');
@@ -65,7 +77,6 @@ export const AddProduct = () => {
       const res = await api.analyzeProduct(selectedFile);
       setAiAnalysis(res.analysis);
 
-      // Autofill Catalog Form from AI Output
       if (res.catalog) {
         setTitle(res.catalog.title || '');
         setDescription(res.catalog.description || '');
@@ -80,6 +91,41 @@ export const AddProduct = () => {
       setError(err.message || 'Vision AI analysis failed. Please check backend server.');
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  // Trigger Translation (/translate)
+  const handleTranslateContent = async (targetLang) => {
+    setTranslating(true);
+    setError('');
+
+    try {
+      const sourceCatalog = {
+        title: title || titleHi,
+        description: description || descriptionHi,
+        category: category || categoryHi,
+        tags: (tags || tagsHi).split(',').map(t => t.trim()).filter(Boolean),
+      };
+
+      const res = await api.translate(sourceCatalog, targetLang);
+
+      if (targetLang === 'hi') {
+        setTitleHi(res.title || '');
+        setDescriptionHi(res.description || '');
+        setCategoryHi(res.category || '');
+        setTagsHi(Array.isArray(res.tags) ? res.tags.join(', ') : res.tags || '');
+        setActiveTabLang('hi');
+      } else {
+        setTitle(res.title || '');
+        setDescription(res.description || '');
+        setCategory(res.category || '');
+        setTags(Array.isArray(res.tags) ? res.tags.join(', ') : res.tags || '');
+        setActiveTabLang('en');
+      }
+    } catch (err) {
+      setError(err.message || 'Translation failed.');
+    } finally {
+      setTranslating(false);
     }
   };
 
@@ -109,7 +155,9 @@ export const AddProduct = () => {
   // Save Final Product to Database (POST /products)
   const handleSaveProduct = async (e) => {
     e.preventDefault();
-    if (!title) {
+    const activeTitle = activeTabLang === 'hi' ? (titleHi || title) : (title || titleHi);
+
+    if (!activeTitle) {
       setError('Product title is required.');
       return;
     }
@@ -117,14 +165,20 @@ export const AddProduct = () => {
     setSaving(true);
 
     try {
-      const tagsArray = tags.split(',').map(t => t.trim()).filter(Boolean);
+      const tagsArray = tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+      const tagsHiArray = tagsHi ? tagsHi.split(',').map(t => t.trim()).filter(Boolean) : [];
+
       const productPayload = {
-        title,
+        title: title || titleHi,
         description,
         category,
         material,
         craft_type: craftType,
         tags: tagsArray,
+        title_hi: titleHi || null,
+        description_hi: descriptionHi || null,
+        category_hi: categoryHi || null,
+        tags_hi: tagsHiArray.length > 0 ? tagsHiArray : null,
         suggested_price: suggestedPrice ? parseFloat(suggestedPrice) : null,
         image_url: previewUrl || null,
         status,
@@ -142,9 +196,13 @@ export const AddProduct = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
-        <h1 style={{ fontSize: '1.8rem' }}>Add Artisan Product</h1>
+        <h1 style={{ fontSize: '1.8rem' }}>
+          {lang === 'hi' ? 'उत्पाद जोड़ें और AI विवरण बनाएं' : 'Add Artisan Product & Generate AI Listing'}
+        </h1>
         <p style={{ color: 'var(--text-muted)' }}>
-          Upload a craft photo to extract Vision AI features, generate a listing, and save to catalog.
+          {lang === 'hi'
+            ? 'अपनी हस्तशिल्प फोटो अपलोड करें, AI विश्लेषण चलाएं, और हिंदी/अंग्रेजी में कैटलॉग बनाएं।'
+            : 'Upload a craft photo to extract Vision AI features, generate a listing in English or Hindi, and save to catalog.'}
         </p>
       </div>
 
@@ -154,7 +212,7 @@ export const AddProduct = () => {
         {/* Left Column: Image Upload & Preview */}
         <div className="card">
           <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ImageIcon size={20} color="var(--primary-color)" /> Step 1: Upload Craft Image
+            <ImageIcon size={20} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 1: फोटो अपलोड करें' : 'Step 1: Upload Craft Image'}
           </h3>
 
           <div
@@ -167,7 +225,7 @@ export const AddProduct = () => {
               marginBottom: '20px',
               cursor: 'pointer',
             }}
-            onClick={() => document.getElementById('craft-image-input').click()}
+            onClick={() => document.getElementById('craft-image-input-ph8').click()}
           >
             {previewUrl ? (
               <div style={{ position: 'relative' }}>
@@ -176,17 +234,23 @@ export const AddProduct = () => {
                   alt="Craft Preview"
                   style={{ maxHeight: '260px', width: '100%', objectFit: 'contain', borderRadius: '8px' }}
                 />
-                <p style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Click to replace image</p>
+                <p style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {lang === 'hi' ? 'फोटो बदलने के लिए क्लिक करें' : 'Click to replace image'}
+                </p>
               </div>
             ) : (
               <div>
                 <UploadCloud size={48} color="var(--primary-color)" style={{ marginBottom: '12px' }} />
-                <h4 style={{ fontSize: '1.1rem', marginBottom: '4px' }}>Choose or drag craft image</h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Supports JPG, JPEG, PNG (max 10MB)</p>
+                <h4 style={{ fontSize: '1.1rem', marginBottom: '4px' }}>
+                  {lang === 'hi' ? 'हस्तशिल्प फोटो चुनें या खींचें' : 'Choose or drag craft image'}
+                </h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {lang === 'hi' ? 'समर्थित प्रारूप: JPG, JPEG, PNG (अधिकतम 10MB)' : 'Supports JPG, JPEG, PNG (max 10MB)'}
+                </p>
               </div>
             )}
             <input
-              id="craft-image-input"
+              id="craft-image-input-ph8"
               type="file"
               accept=".jpg,.jpeg,.png"
               onChange={handleFileChange}
@@ -202,11 +266,11 @@ export const AddProduct = () => {
           >
             {analyzing ? (
               <>
-                <div className="spinner"></div> Running Vision AI Analysis...
+                <div className="spinner"></div> {lang === 'hi' ? 'AI विश्लेषण चल रहा है...' : 'Running Vision AI Analysis...'}
               </>
             ) : (
               <>
-                <Sparkles size={18} /> Run AI Vision & Catalog Generator
+                <Sparkles size={18} /> {lang === 'hi' ? 'AI विजन विश्लेषण चलाएं' : 'Run AI Vision & Catalog Generator'}
               </>
             )}
           </button>
@@ -215,63 +279,181 @@ export const AddProduct = () => {
           {aiAnalysis && (
             <div style={{ marginTop: '20px', padding: '16px', backgroundColor: 'var(--primary-light)', borderRadius: 'var(--radius-sm)', border: '1px solid #f3d7cb' }}>
               <h4 style={{ fontSize: '0.95rem', color: 'var(--primary-color)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <CheckCircle size={16} /> Detected Vision Attributes
+                <CheckCircle size={16} /> {lang === 'hi' ? 'पहचाने गए विजन गुण' : 'Detected Vision Attributes'}
               </h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.85rem' }}>
-                <div><strong>Product:</strong> {aiAnalysis.product_type}</div>
-                <div><strong>Material:</strong> {aiAnalysis.material}</div>
-                <div><strong>Color:</strong> {aiAnalysis.primary_color}</div>
-                <div><strong>Craft:</strong> {aiAnalysis.craft_type}</div>
-                <div style={{ gridColumn: 'span 2' }}><strong>Style:</strong> {aiAnalysis.style}</div>
+                <div><strong>{lang === 'hi' ? 'उत्पाद:' : 'Product:'}</strong> {aiAnalysis.product_type}</div>
+                <div><strong>{lang === 'hi' ? 'सामग्री:' : 'Material:'}</strong> {aiAnalysis.material}</div>
+                <div><strong>{lang === 'hi' ? 'रंग:' : 'Color:'}</strong> {aiAnalysis.primary_color}</div>
+                <div><strong>{lang === 'hi' ? 'हस्तशिल्प:' : 'Craft:'}</strong> {aiAnalysis.craft_type}</div>
+                <div style={{ gridColumn: 'span 2' }}><strong>{lang === 'hi' ? 'शैली:' : 'Style:'}</strong> {aiAnalysis.style}</div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Right Column: AI Generated Listing Preview & Editing */}
+        {/* Right Column: AI Generated Listing Preview & Multilingual Editor */}
         <div className="card">
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={20} color="var(--primary-color)" /> Step 2: AI Listing Preview & Editor
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={20} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 2: कैटलॉग संपादक' : 'Step 2: Multilingual Catalog Editor'}
+            </h3>
+
+            {/* Language Switch Tabs & Instant Translator */}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                type="button"
+                className={`btn-secondary ${activeTabLang === 'en' ? 'btn-primary' : ''}`}
+                onClick={() => setActiveTabLang('en')}
+                style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                className={`btn-secondary ${activeTabLang === 'hi' ? 'btn-primary' : ''}`}
+                onClick={() => setActiveTabLang('hi')}
+                style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+              >
+                हिंदी
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Translate Action Bar */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', background: '#faf7f3', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Languages size={16} color="var(--primary-color)" /> AI Translation:
+            </span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => handleTranslateContent('hi')}
+                className="btn-outline"
+                style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                disabled={translating}
+              >
+                {translating ? 'अनुवाद हो रहा है...' : 'Translate to Hindi (हिंदी)'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTranslateContent('en')}
+                className="btn-outline"
+                style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                disabled={translating}
+              >
+                {translating ? 'Translating...' : 'Translate to English'}
+              </button>
+            </div>
+          </div>
 
           <form onSubmit={handleSaveProduct}>
-            <div className="form-group">
-              <label>Product Title *</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="AI will populate title..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-            </div>
+            {activeTabLang === 'hi' ? (
+              /* Hindi Input Fields */
+              <>
+                <div className="form-group">
+                  <label>उत्पाद शीर्षक (Title - Hindi) *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="उदा. हस्तनिर्मित मिट्टी का बर्तन"
+                    value={titleHi}
+                    onChange={(e) => setTitleHi(e.target.value)}
+                    required={activeTabLang === 'hi'}
+                  />
+                </div>
 
-            <div className="form-group">
-              <label>Description</label>
-              <textarea
-                className="form-textarea"
-                rows={3}
-                placeholder="AI will generate description..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
+                <div className="form-group">
+                  <label>विवरण (Description - Hindi)</label>
+                  <textarea
+                    className="form-textarea"
+                    rows={3}
+                    placeholder="हिंदी में उत्पाद विवरण दर्ज करें..."
+                    value={descriptionHi}
+                    onChange={(e) => setDescriptionHi(e.target.value)}
+                  />
+                </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label>श्रेणी (Category - Hindi)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="उदा. गृह सजावट > मिट्टी के बर्तन"
+                      value={categoryHi}
+                      onChange={(e) => setCategoryHi(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>टैग (Tags - Hindi)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="टेराकोटा, मिट्टी, हस्तशिल्प"
+                      value={tagsHi}
+                      onChange={(e) => setTagsHi(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* English Input Fields */
+              <>
+                <div className="form-group">
+                  <label>Product Title (English) *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="AI will populate title..."
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required={activeTabLang === 'en'}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Description (English)</label>
+                  <textarea
+                    className="form-textarea"
+                    rows={3}
+                    placeholder="AI will generate description..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group">
+                    <label>Category (English)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Home Decor"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Tags (English, comma-separated)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="pottery, clay, handcrafted"
+                      value={tags}
+                      onChange={(e) => setTags(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Shared Fields */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group">
-                <label>Category</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Home Decor"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Material</label>
+                <label>{lang === 'hi' ? 'सामग्री (Material)' : 'Material'}</label>
                 <input
                   type="text"
                   className="form-input"
@@ -280,11 +462,9 @@ export const AddProduct = () => {
                   onChange={(e) => setMaterial(e.target.value)}
                 />
               </div>
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group">
-                <label>Craft Type</label>
+                <label>{lang === 'hi' ? 'हस्तशिल्प प्रकार (Craft)' : 'Craft Type'}</label>
                 <input
                   type="text"
                   className="form-input"
@@ -293,40 +473,29 @@ export const AddProduct = () => {
                   onChange={(e) => setCraftType(e.target.value)}
                 />
               </div>
-
-              <div className="form-group">
-                <label>Status</label>
-                <select
-                  className="form-select"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                >
-                  <option value="published">Published</option>
-                  <option value="draft">Draft</option>
-                </select>
-              </div>
             </div>
 
             <div className="form-group">
-              <label>Search Tags (comma-separated)</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="pottery, clay, handcrafted"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-              />
+              <label>{lang === 'hi' ? 'उत्पाद की स्थिति (Status)' : 'Status'}</label>
+              <select
+                className="form-select"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <option value="published">{lang === 'hi' ? 'प्रकाशित (Published)' : 'Published'}</option>
+                <option value="draft">{lang === 'hi' ? 'ड्राफ्ट (Draft)' : 'Draft'}</option>
+              </select>
             </div>
 
             {/* Price Recommendation Section */}
             <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#faf7f3', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
               <h4 style={{ fontSize: '0.95rem', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <DollarSign size={16} color="var(--primary-color)" /> Rule-Based Price Calculator
+                <DollarSign size={16} color="var(--primary-color)" /> {lang === 'hi' ? 'मूल्य कैलकुलेटर' : 'Price Recommendation Calculator'}
               </h4>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.8rem' }}>Material Cost (₹)</label>
+                  <label style={{ fontSize: '0.8rem' }}>{lang === 'hi' ? 'सामग्री लागत (₹)' : 'Material Cost (₹)'}</label>
                   <input
                     type="number"
                     className="form-input"
@@ -337,7 +506,7 @@ export const AddProduct = () => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.8rem' }}>Making Time (Hours)</label>
+                  <label style={{ fontSize: '0.8rem' }}>{lang === 'hi' ? 'बनाने का समय (घंटे)' : 'Making Time (Hours)'}</label>
                   <input
                     type="number"
                     className="form-input"
@@ -348,7 +517,7 @@ export const AddProduct = () => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.8rem' }}>Hourly Rate (₹)</label>
+                  <label style={{ fontSize: '0.8rem' }}>{lang === 'hi' ? 'प्रति घंटा दर (₹)' : 'Hourly Rate (₹)'}</label>
                   <input
                     type="number"
                     className="form-input"
@@ -359,17 +528,17 @@ export const AddProduct = () => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.8rem' }}>Product Size</label>
+                  <label style={{ fontSize: '0.8rem' }}>{lang === 'hi' ? 'उत्पाद का आकार' : 'Product Size'}</label>
                   <select
                     className="form-select"
                     value={productSize}
                     onChange={(e) => setProductSize(e.target.value)}
                     style={{ padding: '6px 10px' }}
                   >
-                    <option value="small">Small</option>
-                    <option value="medium">Medium</option>
-                    <option value="large">Large</option>
-                    <option value="extra_large">Extra Large</option>
+                    <option value="small">{lang === 'hi' ? 'छोटा (Small)' : 'Small'}</option>
+                    <option value="medium">{lang === 'hi' ? 'मध्यम (Medium)' : 'Medium'}</option>
+                    <option value="large">{lang === 'hi' ? 'बड़ा (Large)' : 'Large'}</option>
+                    <option value="extra_large">{lang === 'hi' ? 'अति विशाल (Extra Large)' : 'Extra Large'}</option>
                   </select>
                 </div>
               </div>
@@ -381,7 +550,7 @@ export const AddProduct = () => {
                 style={{ width: '100%', marginTop: '12px', padding: '8px', fontSize: '0.85rem' }}
                 disabled={calculatingPrice}
               >
-                {calculatingPrice ? 'Calculating...' : 'Calculate Price Recommendation'}
+                {calculatingPrice ? (lang === 'hi' ? 'गणना हो रही है...' : 'Calculating...') : (lang === 'hi' ? 'अनुशंसित मूल्य की गणना करें' : 'Calculate Price Recommendation')}
               </button>
 
               {priceTiers && (
@@ -394,7 +563,7 @@ export const AddProduct = () => {
             </div>
 
             <div className="form-group">
-              <label>Final Price (INR ₹)</label>
+              <label>{lang === 'hi' ? 'अंतिम मूल्य (INR ₹)' : 'Final Price (INR ₹)'}</label>
               <input
                 type="number"
                 className="form-input"
@@ -412,11 +581,11 @@ export const AddProduct = () => {
             >
               {saving ? (
                 <>
-                  <div className="spinner"></div> Saving to Catalog...
+                  <div className="spinner"></div> {lang === 'hi' ? 'सहेजा जा रहा है...' : 'Saving to Catalog...'}
                 </>
               ) : (
                 <>
-                  <Save size={18} /> Save Product to Catalog
+                  <Save size={18} /> {lang === 'hi' ? 'उत्पाद कैटलॉग में सहेजें' : 'Save Product to Catalog'}
                 </>
               )}
             </button>
