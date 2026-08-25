@@ -1,0 +1,3 @@
+"""
+KarigarAI Backend Application Package
+"""
