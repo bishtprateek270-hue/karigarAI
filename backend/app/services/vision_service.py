@@ -15,13 +15,16 @@ class VisionService:
     def __init__(self):
         self.system_prompt = (
             "You are an expert artisan product classifier for KarigarAI. "
-            "Analyze the uploaded product image and extract structured information in JSON format. "
+            "Analyze the uploaded product image and extract grounded, factual information. "
+            "IMPORTANT GUIDELINES TO PREVENT HALLUCINATIONS:\n"
+            "- Do NOT claim specific wood species (e.g. Teak, Sheesham), specific geographic origins (e.g. Rajasthani, Kashmiri), or unverified origins unless clearly evident.\n"
+            "- Use safe, accurate terms such as 'Wood', 'Metal Detailing', 'Clay', 'Silk', 'Brass', 'Wood Carving', 'Handcrafted'.\n\n"
             "Return ONLY a JSON object containing these exact 5 keys:\n"
-            "- product_type: Specific type of product (e.g., Carved Wooden Jewelry Box, Terracotta Pot, Handwoven Shawl, Wooden Statue)\n"
-            "- material: Primary material (e.g., Polished Teak Wood, Clay, Silk, Brass)\n"
-            "- primary_color: Dominant color or color combination (e.g., Rich Wood Brown, Terracotta Red, Deep Blue, Gold)\n"
-            "- craft_type: Artisan craft or technique (e.g., Wood Carving & Brass Inlay, Handmade Pottery, Handloom Weaving, Metalwork)\n"
-            "- style: Cultural or artistic style (e.g., Traditional Rajasthani Craft, Traditional Indian, Kashmiri Folk, Modern Minimalist)\n"
+            "- product_type: Specific grounded product type (e.g., Carved Wooden Box, Terracotta Pot, Handwoven Shawl, Brass Lamp)\n"
+            "- material: Primary visible material (e.g., Wood, Clay, Silk, Brass, Metal)\n"
+            "- primary_color: Dominant color (e.g., Brown, Terracotta Red, Deep Blue, Gold, Brass)\n"
+            "- craft_type: Artisan technique (e.g., Wood Carving, Handmade Pottery, Handloom Weaving, Metalwork)\n"
+            "- style: Artistic style (e.g., Traditional Handcrafted, Folk Art, Classic Ethnic, Modern Minimalist)\n"
             "Do not include markdown code block formatting or extra commentary outside the JSON."
         )
 
@@ -154,11 +157,11 @@ class VisionService:
             )
 
         return {
-            "product_type": str(parsed["product_type"]),
-            "material": str(parsed["material"]),
-            "primary_color": str(parsed["primary_color"]),
-            "craft_type": str(parsed["craft_type"]),
-            "style": str(parsed["style"]),
+            "product_type": str(parsed["product_type"]).strip(),
+            "material": str(parsed["material"]).strip(),
+            "primary_color": str(parsed["primary_color"]).strip(),
+            "craft_type": str(parsed["craft_type"]).strip(),
+            "style": str(parsed["style"]).strip(),
         }
 
     def _offline_image_feature_analysis(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
@@ -178,49 +181,49 @@ class VisionService:
         except Exception as e:
             logger.warning(f"PIL image processing failed: {e}")
 
-        # Check for Carved Wooden Box / Wooden Craft
+        # Check for Carved Wooden Box / Wooden Craft (Grounded, non-hallucinated terms)
         is_wood_color = (avg_r > avg_g) and (avg_g > avg_b) and (avg_r - avg_b > 15) and (avg_r < 185)
         is_box_keyword = any(k in fn_lower for k in ["box", "carv", "wood", "casket", "chest", "jewelry", "painting", "download"])
 
         if is_box_keyword or (is_wood_color and "pot" not in fn_lower and "clay" not in fn_lower):
             return {
                 "product_type": "Carved Wooden Jewelry Box",
-                "material": "Polished Teak Wood & Brass",
-                "primary_color": "Rich Wood Brown",
-                "craft_type": "Wood Carving & Brass Inlay",
-                "style": "Traditional Rajasthani Craft",
+                "material": "Wood & Metal",
+                "primary_color": "Brown",
+                "craft_type": "Wood Carving",
+                "style": "Traditional Handcrafted",
             }
         elif "shawl" in fn_lower or "textile" in fn_lower or "fabric" in fn_lower:
             return {
                 "product_type": "Handwoven Shawl",
-                "material": "Pashmina Silk",
-                "primary_color": "Royal Blue",
+                "material": "Silk",
+                "primary_color": "Blue",
                 "craft_type": "Handloom Weaving",
-                "style": "Kashmiri Folk",
+                "style": "Traditional Handcrafted",
             }
         elif "metal" in fn_lower or "brass" in fn_lower or "lamp" in fn_lower or "diya" in fn_lower:
             return {
-                "product_type": "Brass Oil Lamp (Diya)",
+                "product_type": "Brass Diya",
                 "material": "Brass",
-                "primary_color": "Golden Yellow",
+                "primary_color": "Yellow",
                 "craft_type": "Metal Casting",
-                "style": "Traditional Ethnic",
+                "style": "Classic Ethnic",
             }
         elif "pot" in fn_lower or "clay" in fn_lower or "terracotta" in fn_lower:
             return {
                 "product_type": "Terracotta Pot",
-                "material": "Natural Clay",
-                "primary_color": "Terracotta Red",
+                "material": "Clay",
+                "primary_color": "Red",
                 "craft_type": "Handmade Pottery",
-                "style": "Traditional Indian",
+                "style": "Traditional Handcrafted",
             }
         else:
             return {
                 "product_type": "Carved Wooden Jewelry Box",
-                "material": "Polished Teak Wood & Brass",
-                "primary_color": "Rich Wood Brown",
-                "craft_type": "Wood Carving & Brass Inlay",
-                "style": "Traditional Rajasthani Craft",
+                "material": "Wood & Metal",
+                "primary_color": "Brown",
+                "craft_type": "Wood Carving",
+                "style": "Traditional Handcrafted",
             }
 
 

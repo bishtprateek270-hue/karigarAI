@@ -1,6 +1,7 @@
 import json
 import logging
-from typing import Dict, Any
+import re
+from typing import Dict, Any, List
 import httpx
 from fastapi import HTTPException, status
 from app.core.config import settings
@@ -12,14 +13,20 @@ class CatalogService:
     def __init__(self):
         self.system_prompt = (
             "You are an expert e-commerce catalog generator for KarigarAI. "
-            "Using the provided vision analysis of an artisan craft product, generate a marketplace-ready catalog entry. "
+            "Using the provided vision analysis of an artisan craft product, generate a clean, marketplace-ready catalog entry. "
+            "CRITICAL CONSTRAINTS TO PREVENT HALLUCINATIONS AND POOR QUALITY:\n"
+            "1. TITLE: Must be clean, concise, marketplace-friendly, and strictly between 5 to 10 words (e.g., 'Handcrafted Carved Wooden Jewelry Box'). Do NOT make titles overly long or repetitive.\n"
+            "2. NO HALLUCINATIONS: Do NOT claim exact wood species (e.g., Teak, Sheesham), specific geographic origins (e.g., Rajasthani, Kashmiri), or unverified manufacturing techniques unless explicitly supported by the visual analysis.\n"
+            "3. DESCRIPTION: Clean, natural, and professional (2-3 sentences max). Highlight visible craft, material, and utility without exaggerated or unverifiable claims.\n"
+            "4. TAGS: Array of 5 to 10 short, search-friendly keyword phrases (e.g., ['wooden jewelry box', 'wood carving', 'handcrafted', 'jewelry storage', 'home decor']). Do NOT use hyphens joining 5 words or long ugly slugs.\n"
+            "5. CATEGORY: Accurate, concise e-commerce hierarchy (e.g., 'Home & Living > Home Decor > Wooden Boxes & Storage').\n\n"
             "Return ONLY a JSON object containing these exact 5 keys:\n"
-            "- title: A concise, attractive, marketplace-friendly title (e.g. 'Handcrafted Carved Wooden Jewelry Box - Traditional Rajasthani Style')\n"
-            "- description: A professional, grounded product description highlighting craft, material, color, and style. Do not invent unverified claims.\n"
-            "- category: E-commerce category hierarchy (e.g. 'Home & Living > Home Decor > Wooden Boxes & Storage')\n"
-            "- tags: An array of 5 to 10 relevant search tags (e.g. ['wooden box', 'jewelry box', 'teak wood', 'wood carving', 'handcrafted'])\n"
-            "- seo_keywords: An array of 3 to 6 high-intent SEO keywords or phrases\n"
-            "Do not include markdown formatting or extra commentary outside the JSON."
+            "- title: Concise title (5-10 words)\n"
+            "- description: Natural, grounded description\n"
+            "- category: Clean category path\n"
+            "- tags: Array of short search tags\n"
+            "- seo_keywords: Array of 3 to 5 SEO search phrases\n"
+            "Do not include markdown code block formatting or extra commentary outside the JSON."
         )
 
     async def generate_catalog(self, vision_analysis: Dict[str, Any]) -> Dict[str, Any]:
@@ -63,7 +70,6 @@ class CatalogService:
                 logger.warning(f"Gemini Catalog API status ({response.status_code}). Using offline catalog generator.")
                 return self._offline_fallback_catalog(vision_analysis)
 
-
             data = response.json()
             raw_text = (
                 data.get("candidates", [{}])[0]
@@ -72,16 +78,11 @@ class CatalogService:
                 .get("text", "")
                 .strip()
             )
-            return self._parse_json_catalog(raw_text)
+            return self._parse_json_catalog(raw_text, vision_analysis)
 
-        except HTTPException:
-            raise
         except Exception as e:
-            logger.error(f"Gemini Catalog API request failed: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Failed to generate catalog via Gemini API: {str(e)}",
-            )
+            logger.warning(f"Gemini Catalog request failed ({e}). Using offline catalog generator.")
+            return self._offline_fallback_catalog(vision_analysis)
 
     async def _generate_with_openai(self, vision_analysis: Dict[str, Any], api_key: str) -> Dict[str, Any]:
         user_content = (
@@ -115,66 +116,81 @@ class CatalogService:
                 logger.warning(f"OpenAI Catalog API status ({response.status_code}). Using offline catalog generator.")
                 return self._offline_fallback_catalog(vision_analysis)
 
-
             data = response.json()
             raw_text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
-            return self._parse_json_catalog(raw_text)
+            return self._parse_json_catalog(raw_text, vision_analysis)
 
-        except HTTPException:
-            raise
         except Exception as e:
-            logger.error(f"OpenAI Catalog API request failed: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Failed to generate catalog via OpenAI API: {str(e)}",
-            )
+            logger.warning(f"OpenAI Catalog request failed ({e}). Using offline catalog generator.")
+            return self._offline_fallback_catalog(vision_analysis)
 
-    def _parse_json_catalog(self, raw_text: str) -> Dict[str, Any]:
+    def _parse_json_catalog(self, raw_text: str, vision_analysis: Dict[str, Any]) -> Dict[str, Any]:
         clean_text = raw_text.replace("```json", "").replace("```", "").strip()
         try:
             parsed = json.loads(clean_text)
         except json.JSONDecodeError:
-            logger.error(f"Failed to parse catalog JSON response: {raw_text}")
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Catalog AI response could not be parsed as valid JSON.",
-            )
+            return self._offline_fallback_catalog(vision_analysis)
 
-        required_keys = ["title", "description", "category", "tags", "seo_keywords"]
-        missing_keys = [k for k in required_keys if k not in parsed]
+        raw_title = str(parsed.get("title", "")).strip()
+        raw_description = str(parsed.get("description", "")).strip()
+        raw_category = str(parsed.get("category", "")).strip()
+        raw_tags = parsed.get("tags", [])
 
-        if missing_keys:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Catalog AI response missing required keys: {', '.join(missing_keys)}",
-            )
+        # Sanitize Title (Max 12 words)
+        title_words = raw_title.split()
+        if len(title_words) > 12:
+            raw_title = " ".join(title_words[:10])
 
-        tags = [str(t).lower().strip() for t in parsed.get("tags", [])]
-        seo_keywords = [str(k).strip() for k in parsed.get("seo_keywords", [])]
-
-        if len(tags) < 5:
-            tags.extend(["artisan", "handcrafted", "authentic craft", "traditional art", "karigar"])
-        tags = list(dict.fromkeys(tags))[:10]
+        # Sanitize Tags (Short search-friendly 2-3 word phrases)
+        sanitized_tags = self._sanitize_tags(raw_tags, vision_analysis)
 
         return {
-            "title": str(parsed["title"]).strip(),
-            "description": str(parsed["description"]).strip(),
-            "category": str(parsed["category"]).strip(),
-            "tags": tags,
-            "seo_keywords": seo_keywords,
+            "title": raw_title or f"Handcrafted {vision_analysis.get('product_type', 'Craft Item')}",
+            "description": raw_description,
+            "category": raw_category or "Home & Living > Home Decor > Wooden Boxes & Storage",
+            "tags": sanitized_tags,
+            "seo_keywords": [str(k).strip() for k in parsed.get("seo_keywords", [])][:5],
         }
 
-    def _offline_fallback_catalog(self, vision_analysis: Dict[str, Any]) -> Dict[str, Any]:
-        product_type = vision_analysis.get("product_type", "Carved Wooden Jewelry Box")
-        material = vision_analysis.get("material", "Polished Teak Wood")
-        primary_color = vision_analysis.get("primary_color", "Rich Wood Brown")
-        craft_type = vision_analysis.get("craft_type", "Wood Carving & Brass Inlay")
-        style = vision_analysis.get("style", "Traditional Rajasthani Craft")
+    def _sanitize_tags(self, raw_tags: Any, vision_analysis: Dict[str, Any]) -> List[str]:
+        cleaned = []
+        if isinstance(raw_tags, list):
+            for t in raw_tags:
+                t_str = str(t).lower().replace("-", " ").strip()
+                # Remove extra spaces & punctuation
+                t_clean = re.sub(r"[^\w\s]", "", t_str).strip()
+                # Limit tag length to 3 words
+                words = t_clean.split()
+                if 1 <= len(words) <= 3:
+                    cleaned.append(t_clean)
 
-        title = f"Handcrafted {material} {product_type} - {style}"
+        # Fallback default tags if sanitized list is short
+        p_type = vision_analysis.get("product_type", "craft").lower()
+        if "box" in p_type or "jewelry" in p_type:
+            defaults = ["wooden jewelry box", "wood carving", "handcrafted", "jewelry storage", "home decor"]
+        elif "pot" in p_type or "clay" in p_type:
+            defaults = ["terracotta pot", "clay pottery", "handcrafted", "home decor", "earthenware"]
+        elif "shawl" in p_type or "silk" in p_type:
+            defaults = ["handwoven shawl", "silk scarf", "ethnic wear", "handcrafted", "handloom"]
+        else:
+            defaults = ["handcrafted craft", "artisan decor", "home decor", "handmade artifact", "ethnic craft"]
+
+        for d in defaults:
+            if d not in cleaned:
+                cleaned.append(d)
+
+        return list(dict.fromkeys(cleaned))[:8]
+
+    def _offline_fallback_catalog(self, vision_analysis: Dict[str, Any]) -> Dict[str, Any]:
+        product_type = vision_analysis.get("product_type", "Carved Wooden Box")
+        material = vision_analysis.get("material", "Wood & Metal")
+        craft_type = vision_analysis.get("craft_type", "Wood Carving")
+
+        # Grounded, concise title (strictly under 8-10 words)
+        title = f"Handcrafted {product_type}"
         description = (
-            f"Authentic {primary_color.lower()} {product_type.lower()} meticulously created using traditional {craft_type.lower()} techniques. "
-            f"Made from high-quality {material.lower()}, this piece showcases timeless {style.lower()} craftsmanship, perfect for home decor, jewelry storage, or gifting."
+            f"Authentic {product_type.lower()} meticulously created using traditional {craft_type.lower()} techniques. "
+            f"Made from quality {material.lower()}, this piece is perfect for home decor, storage, or gifting."
         )
 
         category_map = {
@@ -193,23 +209,12 @@ class CatalogService:
                 matched_cat = cat_val
                 break
 
-        base_slugs = [
-            product_type.lower(),
-            material.lower(),
-            craft_type.lower(),
-            style.lower(),
-            primary_color.lower(),
-            "handcrafted",
-            "jewelry-box",
-            "wooden-box",
-            "karigar-craft",
-        ]
-        tags = list(dict.fromkeys([s.replace(" ", "-") for s in base_slugs if s]))[:8]
+        tags = self._sanitize_tags([], vision_analysis)
 
         seo_keywords = [
-            f"handcrafted {material.lower()} {product_type.lower()}",
-            f"authentic {craft_type.lower()} {product_type.lower()}",
-            f"{style.lower()} {product_type.lower()} online",
+            f"handcrafted {product_type.lower()}",
+            f"authentic {craft_type.lower()}",
+            f"{product_type.lower()} online",
             f"artisan {product_type.lower()}",
         ]
 
