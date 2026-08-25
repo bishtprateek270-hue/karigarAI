@@ -1,8 +1,9 @@
 """
 AI Service module for KarigarAI.
-Modular placeholder ready for Vision AI model integration in Phase 3.
+Delegates image analysis to VisionService.
 """
 from typing import Dict, Any
+from app.services.vision_service import vision_service
 
 
 class AIService:
@@ -10,13 +11,19 @@ class AIService:
         self, file_bytes: bytes, filename: str, content_type: str
     ) -> Dict[str, Any]:
         """
-        Placeholder method for Phase 3 Vision AI analysis.
-        Currently returns structured upload metadata.
+        Analyzes the uploaded craft/artisan product image using Vision AI.
         """
+        analysis_data = await vision_service.analyze_image(
+            file_bytes=file_bytes,
+            filename=filename,
+            content_type=content_type,
+        )
+
         return {
             "status": "success",
             "filename": filename,
             "content_type": content_type,
+            "analysis": analysis_data,
         }
 
 

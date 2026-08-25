@@ -26,7 +26,7 @@ async def health_check():
     status_code=status.HTTP_200_OK,
     tags=["Product Analysis"],
     summary="Analyze Product Image",
-    description="Upload a product image (.jpg, .jpeg, .png) up to 10MB.",
+    description="Upload a product image (.jpg, .jpeg, .png) up to 10MB for Vision AI feature extraction.",
 )
 async def analyze_product_root(file: UploadFile = File(...)):
     file_bytes = await validate_image_file(file)
@@ -39,6 +39,7 @@ async def analyze_product_root(file: UploadFile = File(...)):
         status=result["status"],
         filename=result["filename"],
         content_type=result["content_type"],
+        analysis=result["analysis"],
     )
 
 
