@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, CheckCircle, Languages, Globe } from 'lucide-react';
+import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, CheckCircle, Languages } from 'lucide-react';
+
 
 export const AddProduct = ({ lang = 'en' }) => {
   const navigate = useNavigate();

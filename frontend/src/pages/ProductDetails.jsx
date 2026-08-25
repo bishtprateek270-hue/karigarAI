@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { Package, ArrowLeft, Edit3, Trash2, Tag, Calendar, Layers, Sparkles } from 'lucide-react';
+import { Package, ArrowLeft, Edit3, Trash2, Tag, Calendar } from 'lucide-react';
 
-export const ProductDetails = () => {
+export const ProductDetails = ({ lang = 'en' }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
@@ -26,7 +26,7 @@ export const ProductDetails = () => {
   }, [id]);
 
   const handleDelete = async () => {
-    if (window.confirm(`Are you sure you want to delete "${product.title}"?`)) {
+    if (window.confirm('Are you sure you want to delete this product catalog entry?')) {
       try {
         await api.deleteProduct(id);
         navigate('/my-products');
@@ -48,86 +48,95 @@ export const ProductDetails = () => {
     return (
       <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
         <div className="error-banner">{error || 'Product not found.'}</div>
-        <Link to="/my-products" className="btn-primary">
+        <Link to="/my-products" className="btn-secondary" style={{ marginTop: '16px', display: 'inline-flex' }}>
           <ArrowLeft size={16} /> Back to My Products
         </Link>
       </div>
     );
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '900px', margin: '0 auto' }}>
-      <Link to="/my-products" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: 'var(--text-muted)' }}>
-        <ArrowLeft size={18} /> Back to My Products
-      </Link>
+  const displayTitle = lang === 'hi' && product.title_hi ? product.title_hi : product.title;
+  const displayDescription = lang === 'hi' && product.description_hi ? product.description_hi : product.description;
+  const displayCategory = lang === 'hi' && product.category_hi ? product.category_hi : product.category;
+  const displayTags = lang === 'hi' && product.tags_hi && product.tags_hi.length > 0 ? product.tags_hi : product.tags;
 
-      <div className="card">
-        <div className="grid-2" style={{ gap: '32px' }}>
-          {/* Image Column */}
-          <div style={{ height: '340px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#f0ebe4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Link to="/my-products" className="btn-secondary">
+          <ArrowLeft size={16} /> {lang === 'hi' ? 'वापस जाएं' : 'Back to My Products'}
+        </Link>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Link to={`/edit-product/${product.id}`} className="btn-primary">
+            <Edit3 size={16} /> {lang === 'hi' ? 'संपादित करें' : 'Edit Listing'}
+          </Link>
+          <button onClick={handleDelete} className="btn-danger">
+            <Trash2 size={16} /> {lang === 'hi' ? 'हटाएं' : 'Delete'}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid-2">
+        {/* Left Column: Image Box */}
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ width: '100%', height: '360px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#f0ebe4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {product.image_url ? (
-              <img src={product.image_url} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={product.image_url} alt={displayTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <Package size={72} color="#a0948c" />
+              <Package size={80} color="#a0948c" />
             )}
           </div>
+        </div>
 
-          {/* Details Column */}
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span className={`badge ${product.status === 'published' ? 'badge-published' : 'badge-draft'}`}>
-                  {product.status}
-                </span>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Calendar size={14} /> {new Date(product.created_at).toLocaleDateString()}
-                </span>
-              </div>
-
-              <h1 style={{ fontSize: '1.8rem', marginBottom: '8px' }}>{product.title}</h1>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '16px' }}>{product.category || 'General Craft'}</p>
-
-              <div style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '20px' }}>
-                ₹{product.suggested_price ? product.suggested_price.toLocaleString() : 'N/A'}
-              </div>
-
-              <div style={{ background: '#faf7f3', padding: '16px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div><strong>Material:</strong> {product.material || 'N/A'}</div>
-                <div><strong>Craft Type:</strong> {product.craft_type || 'N/A'}</div>
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '1rem', marginBottom: '6px' }}>Description</h4>
-                <p style={{ fontSize: '0.92rem', color: 'var(--text-main)', whiteSpace: 'pre-wrap' }}>
-                  {product.description || 'No description provided.'}
-                </p>
-              </div>
-
-              {product.tags && product.tags.length > 0 && (
-                <div>
-                  <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Tag size={14} color="var(--primary-color)" /> Tags
-                  </h4>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {product.tags.map((tag, idx) => (
-                      <span key={idx} style={{ background: 'var(--primary-light)', color: 'var(--primary-color)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.78rem', fontWeight: '600' }}>
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+        {/* Right Column: Product Metadata */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span className={`badge ${product.status === 'published' ? 'badge-published' : 'badge-draft'}`}>
+                {product.status}
+              </span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Calendar size={14} /> Created: {new Date(product.created_at).toLocaleDateString()}
+              </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-              <Link to={`/edit-product/${product.id}`} className="btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
-                <Edit3 size={16} /> Edit Product
-              </Link>
-              <button onClick={handleDelete} className="btn-danger">
-                <Trash2 size={16} /> Delete
-              </button>
-            </div>
+            <h1 style={{ fontSize: '1.8rem', marginBottom: '8px' }}>{displayTitle}</h1>
+            <p style={{ fontSize: '0.95rem', color: 'var(--primary-color)', fontWeight: '600' }}>
+              {displayCategory || 'General Craft'}
+            </p>
           </div>
+
+          <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--primary-color)', background: '#faf7f3', padding: '12px 18px', borderRadius: '8px', width: 'fit-content' }}>
+            ₹{product.suggested_price ? product.suggested_price.toLocaleString() : 'Not Set'}
+          </div>
+
+          <div>
+            <h4 style={{ fontSize: '1rem', marginBottom: '6px' }}>Description</h4>
+            <p style={{ fontSize: '0.92rem', color: 'var(--text-color)', lineHeight: '1.6' }}>
+              {displayDescription || 'No description provided.'}
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#faf7f3', padding: '12px', borderRadius: '8px', fontSize: '0.88rem' }}>
+            <div><strong>Material:</strong> {product.material || 'N/A'}</div>
+            <div><strong>Craft Technique:</strong> {product.craft_type || 'N/A'}</div>
+          </div>
+
+          {displayTags && displayTags.length > 0 && (
+            <div>
+              <h4 style={{ fontSize: '0.9rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Tag size={14} /> Tags
+              </h4>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {displayTags.map((tag, idx) => (
+                  <span key={idx} style={{ background: '#f0ebe4', color: 'var(--text-color)', padding: '4px 10px', borderRadius: '16px', fontSize: '0.8rem' }}>
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
