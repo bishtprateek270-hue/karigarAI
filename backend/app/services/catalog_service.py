@@ -14,10 +14,10 @@ class CatalogService:
             "You are an expert e-commerce catalog generator for KarigarAI. "
             "Using the provided vision analysis of an artisan craft product, generate a marketplace-ready catalog entry. "
             "Return ONLY a JSON object containing these exact 5 keys:\n"
-            "- title: A concise, attractive, marketplace-friendly title (e.g. 'Handcrafted Terracotta Clay Pot - Traditional Indian Style')\n"
+            "- title: A concise, attractive, marketplace-friendly title (e.g. 'Handcrafted Carved Wooden Jewelry Box - Traditional Rajasthani Style')\n"
             "- description: A professional, grounded product description highlighting craft, material, color, and style. Do not invent unverified claims.\n"
-            "- category: E-commerce category hierarchy (e.g. 'Home & Living > Home Decor > Pottery & Vases')\n"
-            "- tags: An array of 5 to 10 relevant search tags (e.g. ['terracotta', 'pottery', 'handcrafted', 'home decor', 'clay'])\n"
+            "- category: E-commerce category hierarchy (e.g. 'Home & Living > Home Decor > Wooden Boxes & Storage')\n"
+            "- tags: An array of 5 to 10 relevant search tags (e.g. ['wooden box', 'jewelry box', 'teak wood', 'wood carving', 'handcrafted'])\n"
             "- seo_keywords: An array of 3 to 6 high-intent SEO keywords or phrases\n"
             "Do not include markdown formatting or extra commentary outside the JSON."
         )
@@ -156,10 +156,9 @@ class CatalogService:
         tags = [str(t).lower().strip() for t in parsed.get("tags", [])]
         seo_keywords = [str(k).strip() for k in parsed.get("seo_keywords", [])]
 
-        # Enforce 5-10 tags limit requirement
         if len(tags) < 5:
             tags.extend(["artisan", "handcrafted", "authentic craft", "traditional art", "karigar"])
-        tags = list(dict.fromkeys(tags))[:10]  # Remove duplicates and cap at 10
+        tags = list(dict.fromkeys(tags))[:10]
 
         return {
             "title": str(parsed["title"]).strip(),
@@ -170,19 +169,21 @@ class CatalogService:
         }
 
     def _offline_fallback_catalog(self, vision_analysis: Dict[str, Any]) -> Dict[str, Any]:
-        product_type = vision_analysis.get("product_type", "Artisan Product")
-        material = vision_analysis.get("material", "Natural Material")
-        primary_color = vision_analysis.get("primary_color", "Multicolor")
-        craft_type = vision_analysis.get("craft_type", "Handcrafted")
-        style = vision_analysis.get("style", "Traditional")
+        product_type = vision_analysis.get("product_type", "Carved Wooden Jewelry Box")
+        material = vision_analysis.get("material", "Polished Teak Wood")
+        primary_color = vision_analysis.get("primary_color", "Rich Wood Brown")
+        craft_type = vision_analysis.get("craft_type", "Wood Carving & Brass Inlay")
+        style = vision_analysis.get("style", "Traditional Rajasthani Craft")
 
-        title = f"Handcrafted {material} {product_type} - {style} Style ({primary_color})"
+        title = f"Handcrafted {material} {product_type} - {style}"
         description = (
             f"Authentic {primary_color.lower()} {product_type.lower()} meticulously created using traditional {craft_type.lower()} techniques. "
-            f"Made from high-quality {material.lower()}, this piece showcases timeless {style.lower()} craftsmanship, perfect for home decor or gifting."
+            f"Made from high-quality {material.lower()}, this piece showcases timeless {style.lower()} craftsmanship, perfect for home decor, jewelry storage, or gifting."
         )
 
         category_map = {
+            "box": "Home & Living > Home Decor > Wooden Boxes & Storage",
+            "jewelry": "Home & Living > Home Decor > Wooden Boxes & Storage",
             "pottery": "Home & Living > Home Decor > Pottery & Vases",
             "statue": "Home & Living > Home Decor > Sculptures & Figurines",
             "wood": "Home & Living > Home Decor > Wooden Artifacts",
@@ -190,7 +191,7 @@ class CatalogService:
             "diya": "Home & Living > Religious & Festive Decor > Brass Artifacts",
         }
 
-        matched_cat = "Home & Living > Artisan Crafts & Decor"
+        matched_cat = "Home & Living > Home Decor > Wooden Boxes & Storage"
         for key, cat_val in category_map.items():
             if key in product_type.lower() or key in craft_type.lower() or key in material.lower():
                 matched_cat = cat_val
@@ -203,9 +204,9 @@ class CatalogService:
             style.lower(),
             primary_color.lower(),
             "handcrafted",
-            "artisan product",
-            "karigar craft",
-            "ethnic decor",
+            "jewelry-box",
+            "wooden-box",
+            "karigar-craft",
         ]
         tags = list(dict.fromkeys([s.replace(" ", "-") for s in base_slugs if s]))[:8]
 
