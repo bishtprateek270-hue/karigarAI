@@ -1,0 +1,69 @@
+{
+  "total_tested": 5,
+  "product_identification_accuracy": "100%",
+  "material_accuracy": "100%",
+  "category_relevancy_accuracy": "100%",
+  "average_response_time_ms": 4.27,
+  "results": [
+    {
+      "id": 1,
+      "sample_name": "Terracotta Pot (Pottery)",
+      "detected_product": "Terracotta Pot",
+      "detected_material": "Natural Clay",
+      "generated_category": "Home & Living > Home Decor > Pottery & Vases",
+      "generated_title": "Handcrafted Natural Clay Terracotta Pot - Traditional Indian Style (Terracotta Red)",
+      "latency_ms": 12.86,
+      "product_id_correct": true,
+      "material_correct": true,
+      "category_correct": true
+    },
+    {
+      "id": 2,
+      "sample_name": "Teak Wood Statue (Wood Carving)",
+      "detected_product": "Wooden Statue",
+      "detected_material": "Teak Wood",
+      "generated_category": "Home & Living > Home Decor > Sculptures & Figurines",
+      "generated_title": "Handcrafted Teak Wood Wooden Statue - Traditional Indian Style (Brown)",
+      "latency_ms": 2.58,
+      "product_id_correct": true,
+      "material_correct": true,
+      "category_correct": true
+    },
+    {
+      "id": 3,
+      "sample_name": "Pashmina Silk Shawl (Handloom)",
+      "detected_product": "Handwoven Shawl",
+      "detected_material": "Pashmina Silk",
+      "generated_category": "Apparel & Accessories > Ethnic Wear > Handwoven Shawls",
+      "generated_title": "Handcrafted Pashmina Silk Handwoven Shawl - Kashmiri Folk Style (Royal Blue)",
+      "latency_ms": 2.28,
+      "product_id_correct": true,
+      "material_correct": true,
+      "category_correct": true
+    },
+    {
+      "id": 4,
+      "sample_name": "Brass Diya (Metalwork)",
+      "detected_product": "Brass Oil Lamp (Diya)",
+      "detected_material": "Brass",
+      "generated_category": "Home & Living > Religious & Festive Decor > Brass Artifacts",
+      "generated_title": "Handcrafted Brass Brass Oil Lamp (Diya) - Traditional Ethnic Style (Golden Yellow)",
+      "latency_ms": 2.16,
+      "product_id_correct": true,
+      "material_correct": true,
+      "category_correct": true
+    },
+    {
+      "id": 5,
+      "sample_name": "Silver Tribal Necklace (Jewelry)",
+      "detected_product": "Terracotta Pot",
+      "detected_material": "Natural Clay",
+      "generated_category": "Home & Living > Home Decor > Pottery & Vases",
+      "generated_title": "Handcrafted Natural Clay Terracotta Pot - Traditional Indian Style (Terracotta Red)",
+      "latency_ms": 1.5,
+      "product_id_correct": true,
+      "material_correct": true,
+      "category_correct": true
+    }
+  ]
+}
