@@ -23,5 +23,11 @@ class Settings:
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "").strip()
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
+    # Database & Authentication Configuration
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./karigarai.db").strip()
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "super-secret-karigarai-jwt-key-2026").strip()
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256").strip()
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
+
 
 settings = Settings()
