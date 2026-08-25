@@ -35,6 +35,9 @@ venv.bak/
 .env.development
 .env.test
 .env.production
+karigarai.db
+*.db
+
 
 # IDEs & Editors
 .vscode/
