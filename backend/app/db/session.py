@@ -20,8 +20,11 @@ try:
     logger.info(f"Connected successfully to database target: {db_url.split('@')[-1] if '@' in db_url else db_url}")
 except Exception as e:
     logger.warning(f"Could not connect to database '{db_url}': {e}. Falling back to SQLite local database.")
-    db_url = "sqlite:///./karigarai.db"
+    import os, tempfile
+    db_file = os.path.join(tempfile.gettempdir(), "karigarai.db")
+    db_url = f"sqlite:///{db_file}"
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
+
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
