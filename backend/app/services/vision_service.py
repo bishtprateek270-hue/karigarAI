@@ -4,9 +4,12 @@ import logging
 import io
 from typing import Dict, Any
 import httpx
-from PIL import Image
+from PIL import Image, ImageFile
 from fastapi import HTTPException, status
 from app.core.config import settings
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
 
 logger = logging.getLogger("karigar_ai.vision_service")
 

@@ -1,8 +1,8 @@
 import json
 import logging
+import re
 from typing import Dict, Any, List
 import httpx
-from fastapi import HTTPException, status
 from app.core.config import settings
 
 logger = logging.getLogger("karigar_ai.language_service")
@@ -10,21 +10,47 @@ logger = logging.getLogger("karigar_ai.language_service")
 
 class LanguageService:
     def __init__(self):
+        # Comprehensive artisan dictionary mapping for offline word-boundary fallback
         self.hi_translations_map = {
             "handcrafted": "हस्तनिर्मित",
+            "hand-crafted": "हस्तनिर्मित",
+            "handmade": "हस्तनिर्मित",
+            "authentic": "प्रामाणिक",
+            "carved": "नक्काशीदार",
+            "carving": "नक्काशी",
+            "wooden": "लकड़ी का",
+            "wood": "लकड़ी",
+            "jewelry box": "आभूषण डिब्बा",
+            "jewellery box": "आभूषण डिब्बा",
+            "box": "डिब्बा",
             "pottery": "मिट्टी के बर्तन",
             "terracotta": "टेराकोटा",
             "clay": "मिट्टी",
             "shawl": "शॉल",
             "silk": "रेशम",
-            "wood": "लकड़ी",
+            "cotton": "सूती",
+            "embroidery": "कढ़ाई",
             "statue": "मूर्ति",
             "sculpture": "मूर्ति",
             "brass": "पीतल",
+            "copper": "तांबा",
+            "metal": "धातु",
             "diya": "दीया",
             "lamp": "दीपक",
-            "home decor": "गृह सज्जा",
+            "home decor": "गृह सजावट",
             "home & living": "गृह एवं सजावट",
+            "storage": "भंडारण",
+            "gifting": "उपहार",
+            "gift": "उपहार",
+            "traditional": "पारंपरिक",
+            "techniques": "तकनीकें",
+            "technique": "तकनीक",
+            "meticulously": "सावधानीपूर्वक",
+            "created": "निर्मित",
+            "made from": "से निर्मित",
+            "quality": "गुणवत्तापूर्ण",
+            "piece": "उत्पाद",
+            "perfect for": "के लिए बेहतरीन विकल्प",
         }
 
     async def translate_catalog(
@@ -37,23 +63,94 @@ class LanguageService:
     ) -> Dict[str, Any]:
         """
         Translates catalog fields (title, description, category, tags) into target language ('hi' or 'en').
+        Follows a robust multi-tiered translation strategy:
+        1. Configured Gemini LLM API (if valid API key available)
+        2. Configured OpenAI LLM API (if valid API key available)
+        3. Free Web Translation API (Google Translate GTX endpoint)
+        4. Offline Rule-Based & Dictionary Fallback
         """
         lang = target_language.lower().strip()
-        if lang not in ["hi", "hindi", "en", "english"]:
-            lang = "hi"
-
-        target_name = "Hindi" if lang in ["hi", "hindi"] else "English"
+        target_code = "hi" if lang in ["hi", "hindi"] else "en"
+        target_name = "Hindi" if target_code == "hi" else "English"
 
         gemini_key = settings.GEMINI_API_KEY
         openai_key = settings.OPENAI_API_KEY
 
+        # Tier 1: Try Gemini LLM if key is present
         if gemini_key and gemini_key != "your_gemini_api_key_here":
-            return await self._translate_with_gemini(title, description, category, tags, target_name)
-        elif openai_key and openai_key != "your_openai_api_key_here":
-            return await self._translate_with_openai(title, description, category, tags, target_name)
-        else:
-            logger.info("No LLM key configured. Using dictionary fallback translator.")
-            return self._fallback_translate(title, description, category, tags, target_name)
+            res = await self._translate_with_gemini(title, description, category, tags, target_name)
+            if res:
+                logger.info("Catalog translated using Gemini API.")
+                return res
+
+        # Tier 2: Try OpenAI LLM if key is present
+        if openai_key and openai_key != "your_openai_api_key_here":
+            res = await self._translate_with_openai(title, description, category, tags, target_name)
+            if res:
+                logger.info("Catalog translated using OpenAI API.")
+                return res
+
+        # Tier 3: Use Free Web Translation API (Google GTX endpoint)
+        res = await self._translate_with_free_api(title, description, category, tags, target_code)
+        if res:
+            logger.info("Catalog translated using Free Web Translation API.")
+            return res
+
+        # Tier 4: Final Offline Dictionary Fallback
+        logger.info("Using offline dictionary fallback translator.")
+        return self._fallback_translate(title, description, category, tags, target_name)
+
+    async def _translate_with_free_api(
+        self,
+        title: str | None,
+        description: str | None,
+        category: str | None,
+        tags: List[str] | None,
+        target_code: str,
+    ) -> Dict[str, Any] | None:
+        """
+        Translates catalog content using free Google Translate GTX API endpoint.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                async def _gtx_text(text: str) -> str:
+                    if not text or not text.strip():
+                        return ""
+                    url = "https://translate.googleapis.com/translate_a/single"
+                    params = {
+                        "client": "gtx",
+                        "sl": "auto",
+                        "tl": target_code,
+                        "dt": "t",
+                        "q": text.strip(),
+                    }
+                    r = await client.get(url, params=params)
+                    if r.status_code == 200:
+                        data = r.json()
+                        translated = "".join([item[0] for item in data[0] if item and item[0]])
+                        return translated.strip()
+                    return text
+
+                t_translated = await _gtx_text(title) if title else ""
+                d_translated = await _gtx_text(description) if description else ""
+                c_translated = await _gtx_text(category) if category else ""
+
+                tags_translated = []
+                if tags:
+                    for tag in tags:
+                        tr_tag = await _gtx_text(tag) if tag else tag
+                        tags_translated.append(tr_tag)
+
+                return {
+                    "title": t_translated or title or "",
+                    "description": d_translated or description or "",
+                    "category": c_translated or category or "",
+                    "tags": tags_translated or tags or [],
+                }
+
+        except Exception as e:
+            logger.warning(f"Free web translation failed, switching to dictionary fallback: {e}")
+            return None
 
     async def _translate_with_gemini(
         self,
@@ -62,7 +159,7 @@ class LanguageService:
         category: str | None,
         tags: List[str] | None,
         target_name: str,
-    ) -> Dict[str, Any]:
+    ) -> Dict[str, Any] | None:
         prompt = (
             f"You are a professional artisan marketplace translator for KarigarAI. "
             f"Translate the following product catalog fields into {target_name}. "
@@ -89,7 +186,8 @@ class LanguageService:
                 response = await client.post(url, json=payload)
 
             if response.status_code != 200:
-                return self._fallback_translate(title, description, category, tags, target_name)
+                logger.warning(f"Gemini API returned status {response.status_code}")
+                return None
 
             data = response.json()
             raw_text = (
@@ -103,7 +201,7 @@ class LanguageService:
 
         except Exception as e:
             logger.error(f"Gemini translation error: {e}")
-            return self._fallback_translate(title, description, category, tags, target_name)
+            return None
 
     async def _translate_with_openai(
         self,
@@ -112,7 +210,7 @@ class LanguageService:
         category: str | None,
         tags: List[str] | None,
         target_name: str,
-    ) -> Dict[str, Any]:
+    ) -> Dict[str, Any] | None:
         system_prompt = (
             f"You are a professional artisan marketplace translator. "
             f"Translate the provided catalog entry into {target_name}. "
@@ -145,7 +243,8 @@ class LanguageService:
                 response = await client.post(url, headers=headers, json=payload)
 
             if response.status_code != 200:
-                return self._fallback_translate(title, description, category, tags, target_name)
+                logger.warning(f"OpenAI API returned status {response.status_code}")
+                return None
 
             data = response.json()
             raw_text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
@@ -153,9 +252,9 @@ class LanguageService:
 
         except Exception as e:
             logger.error(f"OpenAI translation error: {e}")
-            return self._fallback_translate(title, description, category, tags, target_name)
+            return None
 
-    def _parse_json_translation(self, raw_text: str, orig_title, orig_desc, orig_cat, orig_tags) -> Dict[str, Any]:
+    def _parse_json_translation(self, raw_text: str, orig_title, orig_desc, orig_cat, orig_tags) -> Dict[str, Any] | None:
         clean_text = raw_text.replace("```json", "").replace("```", "").strip()
         try:
             parsed = json.loads(clean_text)
@@ -166,23 +265,23 @@ class LanguageService:
                 "tags": [str(t) for t in parsed.get("tags", [])] if isinstance(parsed.get("tags"), list) else orig_tags,
             }
         except Exception:
-            return self._fallback_translate(orig_title, orig_desc, orig_cat, orig_tags, "Hindi")
+            return None
 
     def _fallback_translate(self, title, description, category, tags, target_name) -> Dict[str, Any]:
-        """Robust offline rule-based translation fallback."""
+        """Robust offline rule-based translation fallback with word-boundary awareness."""
         if target_name.lower() in ["hi", "hindi"]:
             t_hi = title or ""
             d_hi = description or ""
             c_hi = category or ""
 
-            # Standard Hindi substitutions
-            for en, hi in self.hi_translations_map.items():
-                if en.lower() in t_hi.lower():
-                    t_hi = t_hi.replace(en, hi).replace(en.capitalize(), hi)
-                if en.lower() in d_hi.lower():
-                    d_hi = d_hi.replace(en, hi).replace(en.capitalize(), hi)
-                if en.lower() in c_hi.lower():
-                    c_hi = c_hi.replace(en, hi).replace(en.capitalize(), hi)
+            # Sort mappings by word length descending to translate multi-word phrases first
+            sorted_mappings = sorted(self.hi_translations_map.items(), key=lambda x: len(x[0]), reverse=True)
+
+            for en, hi in sorted_mappings:
+                pattern = re.compile(r'\b' + re.escape(en) + r'\b', re.IGNORECASE)
+                t_hi = pattern.sub(hi, t_hi)
+                d_hi = pattern.sub(hi, d_hi)
+                c_hi = pattern.sub(hi, c_hi)
 
             # Fallback prefixes if unchanged
             if t_hi == title and title:
@@ -192,7 +291,17 @@ class LanguageService:
             if c_hi == category and category:
                 c_hi = "गृह एवं सजावट > हस्तशिल्प"
 
-            tags_hi = [self.hi_translations_map.get(t.lower(), f"हस्तशिल्प-{t}") for t in (tags or [])]
+            tags_hi = []
+            for t in (tags or []):
+                if not t:
+                    continue
+                tr_t = t
+                for en, hi in sorted_mappings:
+                    pattern = re.compile(r'\b' + re.escape(en) + r'\b', re.IGNORECASE)
+                    tr_t = pattern.sub(hi, tr_t)
+                if tr_t == t:
+                    tr_t = f"हस्तशिल्प-{t}"
+                tags_hi.append(tr_t)
 
             return {
                 "title": t_hi,
@@ -210,3 +319,4 @@ class LanguageService:
 
 
 language_service = LanguageService()
+
