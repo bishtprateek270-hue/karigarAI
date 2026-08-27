@@ -339,6 +339,33 @@ export const EditProduct = ({ lang = 'en' }) => {
             </div>
           </div>
 
+          <div className="form-group" style={{ marginTop: '10px' }}>
+            <label>{lang === 'hi' ? 'उत्पाद फोटो अपडेट करें (Update Product Photo)' : 'Update Product Photo'}</label>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', background: '#f0ebe4', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {imageUrl ? (
+                  <img src={imageUrl} alt="Product Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No Image</span>
+                )}
+              </div>
+              <input
+                type="file"
+                accept=".jpg,.jpeg,.png"
+                className="form-input"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => setImageUrl(reader.result);
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                style={{ padding: '8px' }}
+              />
+            </div>
+          </div>
+
           <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
             <button
               type="submit"
