@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -6,6 +7,10 @@ from app.core.security import hash_password, verify_password, create_access_toke
 from app.models.auth import UserRegisterRequest, UserLoginRequest, UserResponse, TokenResponse
 
 router = APIRouter()
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 @router.post(
@@ -25,10 +30,12 @@ def register_user(req: UserRegisterRequest, db: Session = Depends(get_db)):
         )
 
     hashed_pwd = hash_password(req.password)
+    now_time = utc_now()
     new_user = User(
         name=req.name.strip(),
         email=clean_email,
         password_hash=hashed_pwd,
+        created_at=now_time,
     )
     db.add(new_user)
     db.commit()
@@ -39,7 +46,12 @@ def register_user(req: UserRegisterRequest, db: Session = Depends(get_db)):
     return TokenResponse(
         access_token=token,
         token_type="bearer",
-        user=UserResponse.model_validate(new_user),
+        user=UserResponse(
+            id=new_user.id,
+            name=new_user.name,
+            email=new_user.email,
+            created_at=new_user.created_at or now_time,
+        ),
     )
 
 
@@ -66,5 +78,11 @@ def login_user(req: UserLoginRequest, db: Session = Depends(get_db)):
     return TokenResponse(
         access_token=token,
         token_type="bearer",
-        user=UserResponse.model_validate(user),
+        user=UserResponse(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            created_at=user.created_at or utc_now(),
+        ),
     )
+
