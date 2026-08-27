@@ -65,6 +65,19 @@ export const api = {
     return handleResponse(res);
   },
 
+  async generateCatalog(confirmedAttributes) {
+    const res = await fetch(`${API_BASE_URL}/generate-catalog`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(confirmedAttributes),
+    });
+    return handleResponse(res);
+  },
+
+
   async suggestPrice(pricingData) {
     const res = await fetch(`${API_BASE_URL}/suggest-price`, {
       method: 'POST',

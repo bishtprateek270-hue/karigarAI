@@ -90,7 +90,21 @@ async def analyze_product_root(file: UploadFile = File(...)):
         content_type=result["content_type"],
         analysis=result["analysis"],
         catalog=result["catalog"],
+        image_url=result.get("image_url"),
     )
+
+
+@app.post(
+    "/generate-catalog",
+    status_code=status.HTTP_200_OK,
+    tags=["Catalog Generation"],
+    summary="Generate Catalog from Artisan Confirmed Attributes",
+)
+async def generate_catalog_root(confirmed_attributes: dict):
+    from app.services.catalog_service import catalog_service
+    catalog = await catalog_service.generate_catalog(confirmed_attributes)
+    return {"status": "success", "catalog": catalog}
+
 
 
 @app.post(

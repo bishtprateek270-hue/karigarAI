@@ -179,6 +179,31 @@ def test_multilingual_translation():
     print_status("Multilingual translation service correctly translated content into Hindi")
 
 
+def test_vision_reliability_and_catalog_generation():
+    # 1. Unusual / Obscure craft image analysis
+    unusual_img = io.BytesIO(b"\xff\xd8\xff\xe0obscure_bytes")
+    res_obscure = client.post("/analyze-product", files={"file": ("obscure_craft.jpg", unusual_img, "image/jpeg")})
+    assert res_obscure.status_code == 200
+    data_obscure = res_obscure.json()
+    analysis = data_obscure["analysis"]
+    print_status("Unusual/obscure craft image analysis processed successfully")
+
+    # 2. Confirmed attributes catalog generation
+    confirmed_payload = {
+        "product_type": "Filigree Silver Earrings",
+        "material": "925 Sterling Silver",
+        "primary_color": "Silver",
+        "craft_type": "Filigree Wire Work",
+        "style": "Traditional Handcrafted",
+    }
+    res_cat = client.post("/generate-catalog", json=confirmed_payload)
+    assert res_cat.status_code == 200
+    cat_data = res_cat.json()
+    assert cat_data["status"] == "success"
+    assert "Filigree" in cat_data["catalog"]["title"] or "Silver" in cat_data["catalog"]["title"]
+    print_status("Artisan-confirmed attributes correctly generated clean catalog entry")
+
+
 if __name__ == "__main__":
     print("\n=======================================================")
     print("      KARIGAR AI PHASE 9 FULL AUTOMATED TEST SUITE     ")
@@ -188,6 +213,8 @@ if __name__ == "__main__":
     test_image_upload_validation()
     test_pricing_engine()
     test_multilingual_translation()
+    test_vision_reliability_and_catalog_generation()
     print("\n=======================================================")
     print("   ALL TESTS EXECUTED AND VERIFIED SUCCESSFULLY (100%)  ")
     print("=======================================================\n")
+

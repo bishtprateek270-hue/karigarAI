@@ -19,15 +19,17 @@ class VisionService:
         self.system_prompt = (
             "You are an expert artisan product classifier for KarigarAI. "
             "Analyze the uploaded product image and extract grounded, factual information. "
-            "IMPORTANT GUIDELINES TO PREVENT HALLUCINATIONS:\n"
-            "- Do NOT claim specific wood species (e.g. Teak, Sheesham), specific geographic origins (e.g. Rajasthani, Kashmiri), or unverified origins unless clearly evident.\n"
-            "- Use safe, accurate terms such as 'Wood', 'Metal Detailing', 'Clay', 'Silk', 'Brass', 'Wood Carving', 'Handcrafted'.\n\n"
-            "Return ONLY a JSON object containing these exact 5 keys:\n"
-            "- product_type: Specific grounded product type (e.g., Carved Wooden Box, Terracotta Pot, Handwoven Shawl, Brass Lamp)\n"
-            "- material: Primary visible material (e.g., Wood, Clay, Silk, Brass, Metal)\n"
-            "- primary_color: Dominant color (e.g., Brown, Terracotta Red, Deep Blue, Gold, Brass)\n"
-            "- craft_type: Artisan technique (e.g., Wood Carving, Handmade Pottery, Handloom Weaving, Metalwork)\n"
-            "- style: Artistic style (e.g., Traditional Handcrafted, Folk Art, Classic Ethnic, Modern Minimalist)\n"
+            "IMPORTANT GUIDELINES:\n"
+            "- Treat all detected attributes as SUGGESTIONS, not absolute facts.\n"
+            "- For each attribute (product_type, material, primary_color, craft_type, style), return an object with 'value' and qualitative 'confidence' ('high', 'medium', 'low', 'uncertain').\n"
+            "- If an attribute cannot be determined with certainty, set 'value': 'Unknown' and 'confidence': 'uncertain'. Do NOT guess specific wood species (e.g. Teak, Sheesham), exact origins, or unverified techniques.\n"
+            "- Use qualitative terms only. Never use percentage numbers.\n\n"
+            "Return ONLY a JSON object with these exact 5 keys:\n"
+            "- product_type: {'value': string, 'confidence': 'high'|'medium'|'low'|'uncertain'}\n"
+            "- material: {'value': string, 'confidence': 'high'|'medium'|'low'|'uncertain'}\n"
+            "- primary_color: {'value': string, 'confidence': 'high'|'medium'|'low'|'uncertain'}\n"
+            "- craft_type: {'value': string, 'confidence': 'high'|'medium'|'low'|'uncertain'}\n"
+            "- style: {'value': string, 'confidence': 'high'|'medium'|'low'|'uncertain'}\n"
             "Do not include markdown code block formatting or extra commentary outside the JSON."
         )
 
@@ -139,6 +141,23 @@ class VisionService:
             logger.warning(f"OpenAI API request failed ({e}). Using smart PIL feature analyzer fallback.")
             return self._offline_image_feature_analysis(file_bytes, filename)
 
+    def _normalize_attribute(self, raw_val: Any, default_val: str = "Unknown", default_conf: str = "medium") -> Dict[str, str]:
+        if isinstance(raw_val, dict):
+            val = str(raw_val.get("value", default_val)).strip()
+            conf = str(raw_val.get("confidence", default_conf)).strip().lower()
+            if conf not in ["high", "medium", "low", "uncertain"]:
+                conf = default_conf
+            if not val or val.lower() == "unknown":
+                val = "Unknown"
+                conf = "uncertain"
+            return {"value": val, "confidence": conf}
+        elif isinstance(raw_val, str):
+            val = raw_val.strip()
+            if not val or val.lower() == "unknown":
+                return {"value": "Unknown", "confidence": "uncertain"}
+            return {"value": val, "confidence": default_conf}
+        return {"value": default_val, "confidence": "uncertain"}
+
     def _parse_json_response(self, raw_text: str) -> Dict[str, Any]:
         clean_text = raw_text.replace("```json", "").replace("```", "").strip()
         try:
@@ -150,21 +169,39 @@ class VisionService:
                 detail="Vision AI response could not be parsed as valid JSON.",
             )
 
-        required_keys = ["product_type", "material", "primary_color", "craft_type", "style"]
-        missing_keys = [k for k in required_keys if k not in parsed or not parsed[k]]
+        product_type = self._normalize_attribute(parsed.get("product_type"), "Unknown Product", "high")
+        material = self._normalize_attribute(parsed.get("material"), "Unknown", "medium")
+        primary_color = self._normalize_attribute(parsed.get("primary_color"), "Unknown", "high")
+        craft_type = self._normalize_attribute(parsed.get("craft_type"), "Handcrafted", "medium")
+        style = self._normalize_attribute(parsed.get("style"), "Traditional Handcrafted", "medium")
 
-        if missing_keys:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Vision AI response missing required fields: {', '.join(missing_keys)}",
-            )
+        # Determine overall uncertainty flag
+        is_uncertain = any(
+            attr["confidence"] in ["low", "uncertain"] or attr["value"] == "Unknown"
+            for attr in [product_type, material, craft_type]
+        )
 
         return {
-            "product_type": str(parsed["product_type"]).strip(),
-            "material": str(parsed["material"]).strip(),
-            "primary_color": str(parsed["primary_color"]).strip(),
-            "craft_type": str(parsed["craft_type"]).strip(),
-            "style": str(parsed["style"]).strip(),
+            "product_type": product_type["value"],
+            "material": material["value"],
+            "primary_color": primary_color["value"],
+            "craft_type": craft_type["value"],
+            "style": style["value"],
+
+            "product_type_meta": product_type,
+            "material_meta": material,
+            "primary_color_meta": primary_color,
+            "craft_type_meta": craft_type,
+            "style_meta": style,
+
+            "is_uncertain": is_uncertain,
+            "attributes": {
+                "product_type": product_type,
+                "material": material,
+                "primary_color": primary_color,
+                "craft_type": craft_type,
+                "style": style,
+            }
         }
 
     def _offline_image_feature_analysis(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
@@ -189,45 +226,70 @@ class VisionService:
         is_box_keyword = any(k in fn_lower for k in ["box", "carv", "wood", "casket", "chest", "jewelry", "painting", "download"])
 
         if is_box_keyword or (is_wood_color and "pot" not in fn_lower and "clay" not in fn_lower):
-            return {
-                "product_type": "Carved Wooden Jewelry Box",
-                "material": "Wood & Metal",
-                "primary_color": "Brown",
-                "craft_type": "Wood Carving",
-                "style": "Traditional Handcrafted",
-            }
+            pt = {"value": "Carved Wooden Jewelry Box", "confidence": "high"}
+            mat = {"value": "Wood & Metal", "confidence": "high"}
+            col = {"value": "Brown", "confidence": "high"}
+            craft = {"value": "Wood Carving", "confidence": "high"}
+            st = {"value": "Traditional Handcrafted", "confidence": "high"}
         elif "shawl" in fn_lower or "textile" in fn_lower or "fabric" in fn_lower:
-            return {
-                "product_type": "Handwoven Shawl",
-                "material": "Silk",
-                "primary_color": "Blue",
-                "craft_type": "Handloom Weaving",
-                "style": "Traditional Handcrafted",
-            }
+            pt = {"value": "Handwoven Shawl", "confidence": "high"}
+            mat = {"value": "Silk", "confidence": "medium"}
+            col = {"value": "Blue", "confidence": "high"}
+            craft = {"value": "Handloom Weaving", "confidence": "high"}
+            st = {"value": "Traditional Handcrafted", "confidence": "medium"}
         elif "metal" in fn_lower or "brass" in fn_lower or "lamp" in fn_lower or "diya" in fn_lower:
-            return {
-                "product_type": "Brass Diya",
-                "material": "Brass",
-                "primary_color": "Yellow",
-                "craft_type": "Metal Casting",
-                "style": "Classic Ethnic",
-            }
+            pt = {"value": "Brass Diya", "confidence": "high"}
+            mat = {"value": "Brass", "confidence": "high"}
+            col = {"value": "Yellow", "confidence": "medium"}
+            craft = {"value": "Metal Casting", "confidence": "medium"}
+            st = {"value": "Classic Ethnic", "confidence": "medium"}
         elif "pot" in fn_lower or "clay" in fn_lower or "terracotta" in fn_lower:
-            return {
-                "product_type": "Terracotta Pot",
-                "material": "Clay",
-                "primary_color": "Red",
-                "craft_type": "Handmade Pottery",
-                "style": "Traditional Handcrafted",
-            }
+            pt = {"value": "Terracotta Pot", "confidence": "high"}
+            mat = {"value": "Clay", "confidence": "high"}
+            col = {"value": "Red", "confidence": "high"}
+            craft = {"value": "Handmade Pottery", "confidence": "high"}
+            st = {"value": "Traditional Handcrafted", "confidence": "high"}
+        elif "unusual" in fn_lower or "obscure" in fn_lower or "unknown" in fn_lower:
+            pt = {"value": "Unknown", "confidence": "uncertain"}
+            mat = {"value": "Unknown", "confidence": "uncertain"}
+            col = {"value": "Unknown", "confidence": "uncertain"}
+            craft = {"value": "Unknown", "confidence": "uncertain"}
+            st = {"value": "Unknown", "confidence": "uncertain"}
         else:
-            return {
-                "product_type": "Carved Wooden Jewelry Box",
-                "material": "Wood & Metal",
-                "primary_color": "Brown",
-                "craft_type": "Wood Carving",
-                "style": "Traditional Handcrafted",
+            pt = {"value": "Carved Wooden Jewelry Box", "confidence": "medium"}
+            mat = {"value": "Wood & Metal", "confidence": "medium"}
+            col = {"value": "Brown", "confidence": "high"}
+            craft = {"value": "Wood Carving", "confidence": "medium"}
+            st = {"value": "Traditional Handcrafted", "confidence": "medium"}
+
+        is_uncertain = any(
+            attr["confidence"] in ["low", "uncertain"] or attr["value"] == "Unknown"
+            for attr in [pt, mat, craft]
+        )
+
+        return {
+            "product_type": pt["value"],
+            "material": mat["value"],
+            "primary_color": col["value"],
+            "craft_type": craft["value"],
+            "style": st["value"],
+
+            "product_type_meta": pt,
+            "material_meta": mat,
+            "primary_color_meta": col,
+            "craft_type_meta": craft,
+            "style_meta": st,
+
+            "is_uncertain": is_uncertain,
+            "attributes": {
+                "product_type": pt,
+                "material": mat,
+                "primary_color": col,
+                "craft_type": craft,
+                "style": st,
             }
+        }
 
 
 vision_service = VisionService()
+

@@ -1,8 +1,9 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 
 class ProductVisionDetails(BaseModel):
+
     product_type: str = Field(
         ...,
         description="Type of product (e.g. Terracotta Pot, Wooden Sculpture, Handwoven Shawl)",
@@ -64,3 +65,5 @@ class ProductAnalysisResponse(BaseModel):
     content_type: str = Field(..., example="image/jpeg")
     analysis: ProductVisionDetails
     catalog: ProductCatalogDetails
+    image_url: Optional[str] = Field(None, example="https://res.cloudinary.com/demo/image/upload/sample.jpg")
+

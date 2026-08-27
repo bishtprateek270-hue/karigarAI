@@ -13,10 +13,10 @@ class CatalogService:
     def __init__(self):
         self.system_prompt = (
             "You are an expert e-commerce catalog generator for KarigarAI. "
-            "Using the provided vision analysis of an artisan craft product, generate a clean, marketplace-ready catalog entry. "
+            "Using the provided artisan-confirmed attributes of an artisan craft product, generate a clean, marketplace-ready catalog entry. "
             "CRITICAL CONSTRAINTS TO PREVENT HALLUCINATIONS AND POOR QUALITY:\n"
             "1. TITLE: Must be clean, concise, marketplace-friendly, and strictly between 5 to 10 words (e.g., 'Handcrafted Carved Wooden Jewelry Box'). Do NOT make titles overly long or repetitive.\n"
-            "2. NO HALLUCINATIONS: Do NOT claim exact wood species (e.g., Teak, Sheesham), specific geographic origins (e.g., Rajasthani, Kashmiri), or unverified manufacturing techniques unless explicitly supported by the visual analysis.\n"
+            "2. NO HALLUCINATIONS: Do NOT claim exact wood species (e.g., Teak, Sheesham), specific geographic origins (e.g., Rajasthani, Kashmiri), or unverified manufacturing techniques unless explicitly supported by the confirmed analysis.\n"
             "3. DESCRIPTION: Clean, natural, and professional (2-3 sentences max). Highlight visible craft, material, and utility without exaggerated or unverifiable claims.\n"
             "4. TAGS: Array of 5 to 10 short, search-friendly keyword phrases (e.g., ['wooden jewelry box', 'wood carving', 'handcrafted', 'jewelry storage', 'home decor']). Do NOT use hyphens joining 5 words or long ugly slugs.\n"
             "5. CATEGORY: Accurate, concise e-commerce hierarchy (e.g., 'Home & Living > Home Decor > Wooden Boxes & Storage').\n\n"
@@ -29,31 +29,46 @@ class CatalogService:
             "Do not include markdown code block formatting or extra commentary outside the JSON."
         )
 
+    def _get_val(self, item: Any, default: str = "") -> str:
+        if isinstance(item, dict):
+            return str(item.get("value", default)).strip()
+        if item is None:
+            return default
+        return str(item).strip()
+
     async def generate_catalog(self, vision_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Generates a marketplace-ready product catalog based on Vision AI analysis.
+        Generates a marketplace-ready product catalog based on Vision AI analysis / confirmed attributes.
         Uses Gemini/OpenAI API if keys are set, otherwise uses deterministic fallback.
         """
         gemini_key = settings.GEMINI_API_KEY
         openai_key = settings.OPENAI_API_KEY
 
+        clean_analysis = {
+            "product_type": self._get_val(vision_analysis.get("product_type"), "Craft Product"),
+            "material": self._get_val(vision_analysis.get("material"), "Handcrafted Material"),
+            "primary_color": self._get_val(vision_analysis.get("primary_color"), "Natural"),
+            "craft_type": self._get_val(vision_analysis.get("craft_type"), "Handcraft"),
+            "style": self._get_val(vision_analysis.get("style"), "Traditional Handcrafted"),
+        }
+
         if gemini_key and gemini_key != "your_gemini_api_key_here":
-            return await self._generate_with_gemini(vision_analysis, gemini_key)
+            return await self._generate_with_gemini(clean_analysis, gemini_key)
         elif openai_key and openai_key != "your_openai_api_key_here":
-            return await self._generate_with_openai(vision_analysis, openai_key)
+            return await self._generate_with_openai(clean_analysis, openai_key)
         else:
             logger.info("No active Vision/LLM API key found in .env. Using offline catalog generator.")
-            return self._offline_fallback_catalog(vision_analysis)
+            return self._offline_fallback_catalog(clean_analysis)
 
     async def _generate_with_gemini(self, vision_analysis: Dict[str, Any], api_key: str) -> Dict[str, Any]:
         prompt = (
             f"{self.system_prompt}\n\n"
-            f"Input Vision Analysis:\n"
-            f"- Product Type: {vision_analysis.get('product_type')}\n"
-            f"- Material: {vision_analysis.get('material')}\n"
-            f"- Primary Color: {vision_analysis.get('primary_color')}\n"
-            f"- Craft Type: {vision_analysis.get('craft_type')}\n"
-            f"- Style: {vision_analysis.get('style')}\n"
+            f"Input Artisan-Confirmed Attributes:\n"
+            f"- Product Type: {self._get_val(vision_analysis.get('product_type'))}\n"
+            f"- Material: {self._get_val(vision_analysis.get('material'))}\n"
+            f"- Primary Color: {self._get_val(vision_analysis.get('primary_color'))}\n"
+            f"- Craft Type: {self._get_val(vision_analysis.get('craft_type'))}\n"
+            f"- Style: {self._get_val(vision_analysis.get('style'))}\n"
         )
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={api_key}"
@@ -86,12 +101,12 @@ class CatalogService:
 
     async def _generate_with_openai(self, vision_analysis: Dict[str, Any], api_key: str) -> Dict[str, Any]:
         user_content = (
-            f"Input Vision Analysis:\n"
-            f"- Product Type: {vision_analysis.get('product_type')}\n"
-            f"- Material: {vision_analysis.get('material')}\n"
-            f"- Primary Color: {vision_analysis.get('primary_color')}\n"
-            f"- Craft Type: {vision_analysis.get('craft_type')}\n"
-            f"- Style: {vision_analysis.get('style')}\n"
+            f"Input Artisan-Confirmed Attributes:\n"
+            f"- Product Type: {self._get_val(vision_analysis.get('product_type'))}\n"
+            f"- Material: {self._get_val(vision_analysis.get('material'))}\n"
+            f"- Primary Color: {self._get_val(vision_analysis.get('primary_color'))}\n"
+            f"- Craft Type: {self._get_val(vision_analysis.get('craft_type'))}\n"
+            f"- Style: {self._get_val(vision_analysis.get('style'))}\n"
         )
 
         url = "https://api.openai.com/v1/chat/completions"
@@ -144,8 +159,10 @@ class CatalogService:
         # Sanitize Tags (Short search-friendly 2-3 word phrases)
         sanitized_tags = self._sanitize_tags(raw_tags, vision_analysis)
 
+        pt_val = self._get_val(vision_analysis.get("product_type"), "Craft Item")
+
         return {
-            "title": raw_title or f"Handcrafted {vision_analysis.get('product_type', 'Craft Item')}",
+            "title": raw_title or f"Handcrafted {pt_val}",
             "description": raw_description,
             "category": raw_category or "Home & Living > Home Decor > Wooden Boxes & Storage",
             "tags": sanitized_tags,
@@ -165,7 +182,7 @@ class CatalogService:
                     cleaned.append(t_clean)
 
         # Fallback default tags if sanitized list is short
-        p_type = vision_analysis.get("product_type", "craft").lower()
+        p_type = self._get_val(vision_analysis.get("product_type"), "craft").lower()
         if "box" in p_type or "jewelry" in p_type:
             defaults = ["wooden jewelry box", "wood carving", "handcrafted", "jewelry storage", "home decor"]
         elif "pot" in p_type or "clay" in p_type:
@@ -182,9 +199,9 @@ class CatalogService:
         return list(dict.fromkeys(cleaned))[:8]
 
     def _offline_fallback_catalog(self, vision_analysis: Dict[str, Any]) -> Dict[str, Any]:
-        product_type = vision_analysis.get("product_type", "Carved Wooden Box")
-        material = vision_analysis.get("material", "Wood & Metal")
-        craft_type = vision_analysis.get("craft_type", "Wood Carving")
+        product_type = self._get_val(vision_analysis.get("product_type"), "Carved Wooden Box")
+        material = self._get_val(vision_analysis.get("material"), "Wood & Metal")
+        craft_type = self._get_val(vision_analysis.get("craft_type"), "Wood Carving")
 
         # Grounded, concise title (strictly under 8-10 words)
         title = f"Handcrafted {product_type}"
@@ -228,3 +245,4 @@ class CatalogService:
 
 
 catalog_service = CatalogService()
+

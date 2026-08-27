@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, CheckCircle, Languages } from 'lucide-react';
+import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, CheckCircle, Languages, AlertTriangle, CheckSquare } from 'lucide-react';
 
 
 export const AddProduct = ({ lang = 'en' }) => {
@@ -15,6 +15,15 @@ export const AddProduct = ({ lang = 'en' }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [error, setError] = useState('');
+
+  // Step 2.5: Review & Correct Attributes State
+  const [attrProductType, setAttrProductType] = useState('');
+  const [attrMaterial, setAttrMaterial] = useState('');
+  const [attrPrimaryColor, setAttrPrimaryColor] = useState('');
+  const [attrCraftType, setAttrCraftType] = useState('');
+  const [attrStyle, setAttrStyle] = useState('');
+  const [attributesConfirmed, setAttributesConfirmed] = useState(false);
+  const [generatingCatalog, setGeneratingCatalog] = useState(false);
 
   // Step 3: Editable Catalog Form State (English & Hindi)
   const [activeTabLang, setActiveTabLang] = useState(lang);
@@ -62,10 +71,11 @@ export const AddProduct = ({ lang = 'en' }) => {
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
       setAiAnalysis(null);
+      setAttributesConfirmed(false);
     }
   };
 
-  // Run AI Analysis (/analyze-product)
+  // Run Vision AI Analysis (/analyze-product)
   const handleAnalyze = async () => {
     if (!selectedFile) {
       setError('Please select an artisan craft image first.');
@@ -73,6 +83,7 @@ export const AddProduct = ({ lang = 'en' }) => {
     }
     setError('');
     setAnalyzing(true);
+    setAttributesConfirmed(false);
 
     try {
       const res = await api.analyzeProduct(selectedFile);
@@ -81,21 +92,68 @@ export const AddProduct = ({ lang = 'en' }) => {
         setPreviewUrl(res.image_url);
       }
 
+      // Extract vision attributes into editable state
+      const attrs = res.analysis.attributes || {};
+      const pt = attrs.product_type?.value || res.analysis.product_type || '';
+      const mat = attrs.material?.value || res.analysis.material || '';
+      const col = attrs.primary_color?.value || res.analysis.primary_color || '';
+      const craft = attrs.craft_type?.value || res.analysis.craft_type || '';
+      const st = attrs.style?.value || res.analysis.style || '';
 
+      setAttrProductType(pt === 'Unknown' ? '' : pt);
+      setAttrMaterial(mat === 'Unknown' ? '' : mat);
+      setAttrPrimaryColor(col === 'Unknown' ? '' : col);
+      setAttrCraftType(craft === 'Unknown' ? '' : craft);
+      setAttrStyle(st === 'Unknown' ? '' : st);
+
+      // If initial AI response already had catalog, store it as draft catalog
       if (res.catalog) {
         setTitle(res.catalog.title || '');
         setDescription(res.catalog.description || '');
         setCategory(res.catalog.category || '');
         setTags(Array.isArray(res.catalog.tags) ? res.catalog.tags.join(', ') : res.catalog.tags || '');
       }
-      if (res.analysis) {
-        setMaterial(res.analysis.material || '');
-        setCraftType(res.analysis.craft_type || '');
-      }
     } catch (err) {
       setError(err.message || 'Vision AI analysis failed. Please check backend server.');
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  // Confirm Attributes & Generate Final Catalog (/generate-catalog)
+  const handleConfirmAttributes = async () => {
+    if (!attrProductType || !attrMaterial || !attrCraftType) {
+      setError('Please provide at least Product Type, Material, and Craft Type before generating catalog.');
+      return;
+    }
+
+    setError('');
+    setGeneratingCatalog(true);
+
+    try {
+      const confirmedPayload = {
+        product_type: attrProductType,
+        material: attrMaterial,
+        primary_color: attrPrimaryColor || 'Natural',
+        craft_type: attrCraftType,
+        style: attrStyle || 'Traditional Handcrafted',
+      };
+
+      const res = await api.generateCatalog(confirmedPayload);
+      const cat = res.catalog || res;
+
+      setTitle(cat.title || '');
+      setDescription(cat.description || '');
+      setCategory(cat.category || '');
+      setTags(Array.isArray(cat.tags) ? cat.tags.join(', ') : cat.tags || '');
+
+      setMaterial(attrMaterial);
+      setCraftType(attrCraftType);
+      setAttributesConfirmed(true);
+    } catch (err) {
+      setError(err.message || 'Failed to generate catalog from confirmed attributes.');
+    } finally {
+      setGeneratingCatalog(false);
     }
   };
 
@@ -145,7 +203,7 @@ export const AddProduct = ({ lang = 'en' }) => {
         making_time_hours: parseFloat(makingHours) || 0,
         hourly_rate: parseFloat(hourlyRate) || 0,
         product_size: productSize,
-        craft_category: craftType || 'general',
+        craft_category: craftType || attrCraftType || 'general',
       };
       const res = await api.suggestPrice(payload);
       setPriceTiers(res);
@@ -177,8 +235,8 @@ export const AddProduct = ({ lang = 'en' }) => {
         title: title || titleHi,
         description,
         category,
-        material,
-        craft_type: craftType,
+        material: material || attrMaterial,
+        craft_type: craftType || attrCraftType,
         tags: tagsArray,
         title_hi: titleHi || null,
         description_hi: descriptionHi || null,
@@ -198,6 +256,23 @@ export const AddProduct = ({ lang = 'en' }) => {
     }
   };
 
+  const getConfidenceBadge = (meta) => {
+    const conf = meta?.confidence?.toLowerCase() || 'medium';
+    const val = meta?.value;
+
+    if (conf === 'high' && val !== 'Unknown') {
+      return <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>🟢 High Confidence</span>;
+    }
+    if (conf === 'medium' && val !== 'Unknown') {
+      return <span style={{ background: '#fef9c3', color: '#a16207', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>🟡 Medium Confidence</span>;
+    }
+    return (
+      <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+        ⚠️ Please verify
+      </span>
+    );
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
@@ -205,103 +280,213 @@ export const AddProduct = ({ lang = 'en' }) => {
           {lang === 'hi' ? 'उत्पाद जोड़ें और AI विवरण बनाएं' : 'Add Artisan Product & Generate AI Listing'}
         </h1>
         <p style={{ color: 'var(--text-muted)' }}>
-          {lang === 'hi'
-            ? 'अपनी हस्तशिल्प फोटो अपलोड करें, AI विश्लेषण चलाएं, और हिंदी/अंग्रेजी में कैटलॉग बनाएं।'
-            : 'Upload a craft photo to extract Vision AI features, generate a listing in English or Hindi, and save to catalog.'}
+          {lang === 'hi' ? 'अपनी फोटो अपलोड करें ➔ AI गुणों की समीक्षा करें ➔ कैटलॉग बनाएं ➔ मूल्य सहेजें।' : 'Upload Image ➔ Review/Correct AI Attributes ➔ Confirm ➔ Generate Catalog ➔ Price ➔ Save'}
         </p>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
 
       <div className="grid-2">
-        {/* Left Column: Image Upload & Preview */}
-        <div className="card">
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ImageIcon size={20} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 1: फोटो अपलोड करें' : 'Step 1: Upload Craft Image'}
-          </h3>
+        {/* Left Column: Image Upload & Review AI Attributes */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ImageIcon size={20} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 1: फोटो अपलोड करें' : 'Step 1: Upload Craft Image'}
+            </h3>
 
-          <div
-            style={{
-              border: '2px dashed var(--border-color)',
-              borderRadius: 'var(--radius-md)',
-              padding: '24px',
-              textAlign: 'center',
-              backgroundColor: '#faf7f3',
-              marginBottom: '20px',
-              cursor: 'pointer',
-            }}
-            onClick={() => document.getElementById('craft-image-input-ph8').click()}
-          >
-            {previewUrl ? (
-              <div style={{ position: 'relative' }}>
-                <img
-                  src={previewUrl}
-                  alt="Craft Preview"
-                  style={{ maxHeight: '260px', width: '100%', objectFit: 'contain', borderRadius: '8px' }}
-                />
-                <p style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  {lang === 'hi' ? 'फोटो बदलने के लिए क्लिक करें' : 'Click to replace image'}
-                </p>
-              </div>
-            ) : (
-              <div>
-                <UploadCloud size={48} color="var(--primary-color)" style={{ marginBottom: '12px' }} />
-                <h4 style={{ fontSize: '1.1rem', marginBottom: '4px' }}>
-                  {lang === 'hi' ? 'हस्तशिल्प फोटो चुनें या खींचें' : 'Choose or drag craft image'}
-                </h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  {lang === 'hi' ? 'समर्थित प्रारूप: JPG, JPEG, PNG (अधिकतम 10MB)' : 'Supports JPG, JPEG, PNG (max 10MB)'}
-                </p>
-              </div>
-            )}
-            <input
-              id="craft-image-input-ph8"
-              type="file"
-              accept=".jpg,.jpeg,.png"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-            />
+            <div
+              style={{
+                border: '2px dashed var(--border-color)',
+                borderRadius: 'var(--radius-md)',
+                padding: '20px',
+                textAlign: 'center',
+                backgroundColor: '#faf7f3',
+                marginBottom: '16px',
+                cursor: 'pointer',
+              }}
+              onClick={() => document.getElementById('craft-image-input-ph8').click()}
+            >
+              {previewUrl ? (
+                <div style={{ position: 'relative' }}>
+                  <img
+                    src={previewUrl}
+                    alt="Craft Preview"
+                    style={{ maxHeight: '220px', width: '100%', objectFit: 'contain', borderRadius: '8px' }}
+                  />
+                  <p style={{ marginTop: '8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    {lang === 'hi' ? 'फोटो बदलने के लिए क्लिक करें' : 'Click to replace image'}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <UploadCloud size={44} color="var(--primary-color)" style={{ marginBottom: '10px' }} />
+                  <h4 style={{ fontSize: '1rem', marginBottom: '4px' }}>
+                    {lang === 'hi' ? 'हस्तशिल्प फोटो चुनें या खींचें' : 'Choose or drag craft image'}
+                  </h4>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    {lang === 'hi' ? 'समर्थित प्रारूप: JPG, JPEG, PNG (अधिकतम 10MB)' : 'Supports JPG, JPEG, PNG (max 10MB)'}
+                  </p>
+                </div>
+              )}
+              <input
+                id="craft-image-input-ph8"
+                type="file"
+                accept=".jpg,.jpeg,.png"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+            </div>
+
+            <button
+              onClick={handleAnalyze}
+              className="btn-primary"
+              style={{ width: '100%', padding: '12px' }}
+              disabled={!selectedFile || analyzing}
+            >
+              {analyzing ? (
+                <>
+                  <div className="spinner"></div> {lang === 'hi' ? 'AI विश्लेषण चल रहा है...' : 'Running Vision AI Analysis...'}
+                </>
+              ) : (
+                <>
+                  <Sparkles size={18} /> {lang === 'hi' ? 'AI विजन विश्लेषण चलाएं' : 'Analyze Craft Image'}
+                </>
+              )}
+            </button>
           </div>
 
-          <button
-            onClick={handleAnalyze}
-            className="btn-primary"
-            style={{ width: '100%', padding: '12px' }}
-            disabled={!selectedFile || analyzing}
-          >
-            {analyzing ? (
-              <>
-                <div className="spinner"></div> {lang === 'hi' ? 'AI विश्लेषण चल रहा है...' : 'Running Vision AI Analysis...'}
-              </>
-            ) : (
-              <>
-                <Sparkles size={18} /> {lang === 'hi' ? 'AI विजन विश्लेषण चलाएं' : 'Run AI Vision & Catalog Generator'}
-              </>
-            )}
-          </button>
-
-          {/* AI Feature Inspection Badge Card */}
+          {/* Step 2: Review & Correct AI Analysis Panel */}
           {aiAnalysis && (
-            <div style={{ marginTop: '20px', padding: '16px', backgroundColor: 'var(--primary-light)', borderRadius: 'var(--radius-sm)', border: '1px solid #f3d7cb' }}>
-              <h4 style={{ fontSize: '0.95rem', color: 'var(--primary-color)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <CheckCircle size={16} /> {lang === 'hi' ? 'पहचाने गए विजन गुण' : 'Detected Vision Attributes'}
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.85rem' }}>
-                <div><strong>{lang === 'hi' ? 'उत्पाद:' : 'Product:'}</strong> {aiAnalysis.product_type}</div>
-                <div><strong>{lang === 'hi' ? 'सामग्री:' : 'Material:'}</strong> {aiAnalysis.material}</div>
-                <div><strong>{lang === 'hi' ? 'रंग:' : 'Color:'}</strong> {aiAnalysis.primary_color}</div>
-                <div><strong>{lang === 'hi' ? 'हस्तशिल्प:' : 'Craft:'}</strong> {aiAnalysis.craft_type}</div>
-                <div style={{ gridColumn: 'span 2' }}><strong>{lang === 'hi' ? 'शैली:' : 'Style:'}</strong> {aiAnalysis.style}</div>
+            <div style={{ padding: '16px', backgroundColor: '#faf7f3', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h4 style={{ fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <CheckSquare size={18} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 2: AI गुणों की समीक्षा और सुधार करें' : 'Step 2: Review & Correct AI Attributes'}
+                </h4>
+                {attributesConfirmed && (
+                  <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '700' }}>
+                    ✓ Confirmed
+                  </span>
+                )}
+              </div>
+
+              {aiAnalysis.is_uncertain && (
+                <div style={{ padding: '10px 14px', background: '#fff7ed', borderLeft: '4px solid #ea580c', borderRadius: '4px', marginBottom: '14px', fontSize: '0.85rem', color: '#9a3412', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong>{lang === 'hi' ? 'सत्यापन आवश्यक है:' : 'Verification Recommended:'}</strong> {lang === 'hi'
+                      ? 'हम इस उत्पाद की पहचान पूरे विश्वास के साथ नहीं कर सके। कृपया नीचे दिए गए गुणों की जांच करें या सही मान दर्ज करें।'
+                      : 'We couldn\'t confidently identify all attributes. Please review and enter the Product Type, Material, and Craft Type below.'}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: '600' }}>{lang === 'hi' ? 'उत्पाद प्रकार (Product Type) *' : 'Product Type *'}</label>
+                    {getConfidenceBadge(aiAnalysis.product_type_meta || aiAnalysis.attributes?.product_type)}
+                  </div>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={attrProductType}
+                    onChange={(e) => setAttrProductType(e.target.value)}
+                    placeholder="e.g. Carved Wooden Box, Terracotta Pot"
+                    style={{ fontSize: '0.9rem', padding: '8px 12px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: '600' }}>{lang === 'hi' ? 'सामग्री (Material) *' : 'Material *'}</label>
+                      {getConfidenceBadge(aiAnalysis.material_meta || aiAnalysis.attributes?.material)}
+                    </div>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={attrMaterial}
+                      onChange={(e) => setAttrMaterial(e.target.value)}
+                      placeholder="e.g. Clay, Wood, Brass"
+                      style={{ fontSize: '0.9rem', padding: '8px 12px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: '600' }}>{lang === 'hi' ? 'हस्तशिल्प (Craft) *' : 'Craft Type *'}</label>
+                      {getConfidenceBadge(aiAnalysis.craft_type_meta || aiAnalysis.attributes?.craft_type)}
+                    </div>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={attrCraftType}
+                      onChange={(e) => setAttrCraftType(e.target.value)}
+                      placeholder="e.g. Wood Carving, Pottery"
+                      style={{ fontSize: '0.9rem', padding: '8px 12px' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: '600' }}>{lang === 'hi' ? 'रंग (Color)' : 'Primary Color'}</label>
+                      {getConfidenceBadge(aiAnalysis.primary_color_meta || aiAnalysis.attributes?.primary_color)}
+                    </div>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={attrPrimaryColor}
+                      onChange={(e) => setAttrPrimaryColor(e.target.value)}
+                      placeholder="e.g. Brown, Terracotta Red"
+                      style={{ fontSize: '0.9rem', padding: '8px 12px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: '600' }}>{lang === 'hi' ? 'शैली (Style)' : 'Style'}</label>
+                      {getConfidenceBadge(aiAnalysis.style_meta || aiAnalysis.attributes?.style)}
+                    </div>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={attrStyle}
+                      onChange={(e) => setAttrStyle(e.target.value)}
+                      placeholder="e.g. Traditional Handcrafted"
+                      style={{ fontSize: '0.9rem', padding: '8px 12px' }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleConfirmAttributes}
+                  className="btn-primary"
+                  style={{ width: '100%', marginTop: '8px', padding: '10px', fontSize: '0.92rem' }}
+                  disabled={generatingCatalog}
+                >
+                  {generatingCatalog ? (
+                    <>
+                      <div className="spinner"></div> {lang === 'hi' ? 'कैटलॉग तैयार हो रहा है...' : 'Generating Catalog...'}
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={16} /> {lang === 'hi' ? 'गुणों की पुष्टि करें और कैटलॉग बनाएं' : 'Confirm Attributes & Generate Catalog'}
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           )}
         </div>
 
         {/* Right Column: AI Generated Listing Preview & Multilingual Editor */}
-        <div className="card">
+        <div className="card" style={{ opacity: attributesConfirmed ? 1 : 0.6, pointerEvents: attributesConfirmed ? 'auto' : 'none', transition: 'all 0.3s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={20} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 2: कैटलॉग संपादक' : 'Step 2: Multilingual Catalog Editor'}
+              <Sparkles size={20} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 3: कैटलॉग संपादक' : 'Step 3: Multilingual Catalog Editor'}
             </h3>
 
             {/* Language Switch Tabs & Instant Translator */}
@@ -325,6 +510,12 @@ export const AddProduct = ({ lang = 'en' }) => {
             </div>
           </div>
 
+          {!attributesConfirmed && (
+            <div style={{ padding: '10px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', borderRadius: '6px', marginBottom: '16px', fontSize: '0.85rem' }}>
+              ℹ️ {lang === 'hi' ? 'कृपया पहले बाईं ओर गुणों की पुष्टि करें।' : 'Please review and confirm AI attributes on the left to unlock catalog generation.'}
+            </div>
+          )}
+
           {/* Quick Translate Action Bar */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', background: '#faf7f3', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -336,7 +527,7 @@ export const AddProduct = ({ lang = 'en' }) => {
                 onClick={() => handleTranslateContent('hi')}
                 className="btn-outline"
                 style={{ padding: '4px 10px', fontSize: '0.78rem' }}
-                disabled={translating}
+                disabled={translating || !attributesConfirmed}
               >
                 {translating ? 'अनुवाद हो रहा है...' : 'Translate to Hindi (हिंदी)'}
               </button>
@@ -345,7 +536,7 @@ export const AddProduct = ({ lang = 'en' }) => {
                 onClick={() => handleTranslateContent('en')}
                 className="btn-outline"
                 style={{ padding: '4px 10px', fontSize: '0.78rem' }}
-                disabled={translating}
+                disabled={translating || !attributesConfirmed}
               >
                 {translating ? 'Translating...' : 'Translate to English'}
               </button>
@@ -582,7 +773,7 @@ export const AddProduct = ({ lang = 'en' }) => {
               type="submit"
               className="btn-primary"
               style={{ width: '100%', padding: '12px' }}
-              disabled={saving}
+              disabled={saving || !attributesConfirmed}
             >
               {saving ? (
                 <>
@@ -600,3 +791,4 @@ export const AddProduct = ({ lang = 'en' }) => {
     </div>
   );
 };
+
