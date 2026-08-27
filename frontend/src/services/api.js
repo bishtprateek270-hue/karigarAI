@@ -1,8 +1,19 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
-  typeof window !== 'undefined' && (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
-    ? 'http://127.0.0.1:8000'
-    : 'https://karigar-ai-8nik.vercel.app'
-);
+const getApiBaseUrl = () => {
+  const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost');
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+
+  if (isLocalHost) {
+    return envUrl || 'http://127.0.0.1:8000';
+  }
+
+  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+    return envUrl;
+  }
+
+  return 'https://karigar-ai-8nik.vercel.app';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 
 function getAuthHeaders() {

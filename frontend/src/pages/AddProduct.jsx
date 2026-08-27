@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { compressImageFile } from '../utils/imageCompressor';
 import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, Languages } from 'lucide-react';
 
