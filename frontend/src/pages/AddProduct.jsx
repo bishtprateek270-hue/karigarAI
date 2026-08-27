@@ -72,6 +72,30 @@ export const AddProduct = ({ lang = 'en' }) => {
     setIsDragging(false);
   };
 
+  // Clear previous analysis, confirmed attributes, and catalog data when changing image
+  const resetStateForNewImage = () => {
+    setAiAnalysis(null);
+    setAttributesConfirmed(false);
+    setAttrProductType('');
+    setAttrMaterial('');
+    setAttrPrimaryColor('');
+    setAttrCraftType('');
+    setAttrStyle('');
+    setTitle('');
+    setDescription('');
+    setCategory('');
+    setTags('');
+    setTitleHi('');
+    setDescriptionHi('');
+    setCategoryHi('');
+    setTagsHi('');
+    setMaterial('');
+    setCraftType('');
+    setSuggestedPrice('');
+    setPriceTiers(null);
+    setError('');
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -84,7 +108,7 @@ export const AddProduct = ({ lang = 'en' }) => {
         setError('Only .jpg, .jpeg, and .png image files are allowed.');
         return;
       }
-      setError('');
+      resetStateForNewImage();
       setSelectedFile(file);
 
       const reader = new FileReader();
@@ -92,9 +116,6 @@ export const AddProduct = ({ lang = 'en' }) => {
         setPreviewUrl(reader.result);
       };
       reader.readAsDataURL(file);
-
-      setAiAnalysis(null);
-      setAttributesConfirmed(false);
     }
   };
 
@@ -107,7 +128,7 @@ export const AddProduct = ({ lang = 'en' }) => {
         setError('Only .jpg, .jpeg, and .png image files are allowed.');
         return;
       }
-      setError('');
+      resetStateForNewImage();
       setSelectedFile(file);
 
       const reader = new FileReader();
@@ -115,9 +136,6 @@ export const AddProduct = ({ lang = 'en' }) => {
         setPreviewUrl(reader.result);
       };
       reader.readAsDataURL(file);
-
-      setAiAnalysis(null);
-      setAttributesConfirmed(false);
     }
   };
 

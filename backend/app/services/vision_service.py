@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 import io
+import re
 from typing import Dict, Any
 import httpx
 from PIL import Image, ImageFile
@@ -205,62 +206,92 @@ class VisionService:
         }
 
     def _offline_image_feature_analysis(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
-        fn_lower = filename.lower()
+        """
+        Grounded, dynamic offline image feature analyzer using PIL.
+        Analyzes actual image pixel channels (RGB), brightness, saturation, and aspect ratio
+        to determine visual attribute suggestions.
+        When features are uncertain, returns 'Unknown' with 'uncertain' confidence.
+        """
+        avg_r, avg_g, avg_b = 128, 128, 128
+        brightness = 128
+        saturation = 0
+        is_tall = False
+        is_wide = False
 
-        # Image color sampling via PIL
-        avg_r, avg_g, avg_b = 120, 80, 50
         try:
             image = Image.open(io.BytesIO(file_bytes))
             image = image.convert("RGB")
+            w, h = image.size
+            if h > 0 and w > 0:
+                aspect = w / float(h)
+                is_tall = aspect < 0.8
+                is_wide = aspect > 1.25
+
             image.thumbnail((100, 100))
             pixels = list(image.getdata())
             if pixels:
                 avg_r = sum(p[0] for p in pixels) // len(pixels)
                 avg_g = sum(p[1] for p in pixels) // len(pixels)
                 avg_b = sum(p[2] for p in pixels) // len(pixels)
+                brightness = (avg_r + avg_g + avg_b) // 3
+
+                # Color saturation approximation
+                max_c = max(avg_r, avg_g, avg_b)
+                min_c = min(avg_r, avg_g, avg_b)
+                saturation = (max_c - min_c)
         except Exception as e:
             logger.warning(f"PIL image processing failed: {e}")
 
-        # Check for Carved Wooden Box / Wooden Craft (Grounded, non-hallucinated terms)
-        is_wood_color = (avg_r > avg_g) and (avg_g > avg_b) and (avg_r - avg_b > 15) and (avg_r < 185)
-        is_box_keyword = any(k in fn_lower for k in ["box", "carv", "wood", "casket", "chest", "jewelry", "painting", "download"])
+        # Dynamic visual color & channel classification
+        fn_lower = filename.lower()
 
-        if is_box_keyword or (is_wood_color and "pot" not in fn_lower and "clay" not in fn_lower):
-            pt = {"value": "Carved Wooden Jewelry Box", "confidence": "high"}
-            mat = {"value": "Wood & Metal", "confidence": "high"}
-            col = {"value": "Brown", "confidence": "high"}
-            craft = {"value": "Wood Carving", "confidence": "high"}
-            st = {"value": "Traditional Handcrafted", "confidence": "high"}
-        elif "shawl" in fn_lower or "textile" in fn_lower or "fabric" in fn_lower:
-            pt = {"value": "Handwoven Shawl", "confidence": "high"}
-            mat = {"value": "Silk", "confidence": "medium"}
-            col = {"value": "Blue", "confidence": "high"}
-            craft = {"value": "Handloom Weaving", "confidence": "high"}
-            st = {"value": "Traditional Handcrafted", "confidence": "medium"}
-        elif "metal" in fn_lower or "brass" in fn_lower or "lamp" in fn_lower or "diya" in fn_lower:
-            pt = {"value": "Brass Diya", "confidence": "high"}
-            mat = {"value": "Brass", "confidence": "high"}
-            col = {"value": "Yellow", "confidence": "medium"}
-            craft = {"value": "Metal Casting", "confidence": "medium"}
-            st = {"value": "Classic Ethnic", "confidence": "medium"}
-        elif "pot" in fn_lower or "clay" in fn_lower or "terracotta" in fn_lower:
-            pt = {"value": "Terracotta Pot", "confidence": "high"}
-            mat = {"value": "Clay", "confidence": "high"}
-            col = {"value": "Red", "confidence": "high"}
+        # Check explicit keywords ONLY if present in user filename (excluding generic 'download', 'image', 'photo', etc.)
+        ignored_words = {"download", "image", "photo", "pic", "picture", "file", "upload", "img", "untitled"}
+        fn_words = set(re.findall(r"[a-z]+", fn_lower)) - ignored_words
+
+        if any(k in fn_words for k in ["pottery", "terracotta", "vase", "pitcher", "jar"]) or (avg_r > 130 and avg_g > 70 and avg_b < 80 and (avg_r - avg_b > 50)):
+            pt = {"value": "Terracotta Pottery Vase" if is_tall else "Terracotta Clay Pot", "confidence": "high"}
+            mat = {"value": "Terracotta Clay", "confidence": "high"}
+            col = {"value": "Terracotta Red / Brown", "confidence": "high"}
             craft = {"value": "Handmade Pottery", "confidence": "high"}
-            st = {"value": "Traditional Handcrafted", "confidence": "high"}
-        elif "unusual" in fn_lower or "obscure" in fn_lower or "unknown" in fn_lower:
+            st = {"value": "Traditional Handcrafted", "confidence": "medium"}
+        elif any(k in fn_words for k in ["wood", "wooden", "box", "chest", "casket", "carv"]) or ((avg_r > avg_g > avg_b) and (avg_r - avg_b > 25) and brightness < 160):
+            pt = {"value": "Carved Wooden Box", "confidence": "medium"}
+            mat = {"value": "Wood", "confidence": "high"}
+            col = {"value": "Natural Brown", "confidence": "high"}
+            craft = {"value": "Wood Carving", "confidence": "medium"}
+            st = {"value": "Traditional Handcrafted", "confidence": "medium"}
+        elif any(k in fn_words for k in ["brass", "metal", "diya", "lamp", "statue", "bronze", "copper"]) or (avg_r > 140 and avg_g > 120 and avg_b < 90 and (avg_r - avg_b > 40)):
+            pt = {"value": "Brass Handicraft Artifact", "confidence": "medium"}
+            mat = {"value": "Brass / Metal", "confidence": "high"}
+            col = {"value": "Golden Yellow", "confidence": "high"}
+            craft = {"value": "Metal Casting & Carving", "confidence": "medium"}
+            st = {"value": "Classic Ethnic", "confidence": "medium"}
+        elif any(k in fn_words for k in ["earring", "jewelry", "necklace", "bangle", "silver", "filigree"]) or (brightness > 180 and saturation < 30):
+            pt = {"value": "Handcrafted Jewelry Item", "confidence": "medium"}
+            mat = {"value": "Metal & Stone", "confidence": "medium"}
+            col = {"value": "Silver / White", "confidence": "medium"}
+            craft = {"value": "Jewelry Making", "confidence": "medium"}
+            st = {"value": "Ethnic Handcrafted", "confidence": "medium"}
+        elif any(k in fn_words for k in ["shawl", "textile", "saree", "fabric", "bag", "embroid", "weave"]) or (saturation > 60):
+            pt = {"value": "Handwoven Textile Item", "confidence": "medium"}
+            mat = {"value": "Fabric / Thread", "confidence": "medium"}
+            col = {"value": "Vibrant Multicolour", "confidence": "high"}
+            craft = {"value": "Handloom & Embroidery", "confidence": "medium"}
+            st = {"value": "Traditional Folk Art", "confidence": "medium"}
+        elif any(k in fn_words for k in ["basket", "bamboo", "cane", "jute", "woven"]):
+            pt = {"value": "Woven Bamboo Basket", "confidence": "high"}
+            mat = {"value": "Bamboo / Cane", "confidence": "high"}
+            col = {"value": "Beige / Natural", "confidence": "high"}
+            craft = {"value": "Cane & Bamboo Weaving", "confidence": "high"}
+            st = {"value": "Rustic Handcrafted", "confidence": "high"}
+        else:
+            # Fallback to Unknown for uncertain visual attributes (Requires Artisan Confirmation)
             pt = {"value": "Unknown", "confidence": "uncertain"}
             mat = {"value": "Unknown", "confidence": "uncertain"}
             col = {"value": "Unknown", "confidence": "uncertain"}
             craft = {"value": "Unknown", "confidence": "uncertain"}
             st = {"value": "Unknown", "confidence": "uncertain"}
-        else:
-            pt = {"value": "Carved Wooden Jewelry Box", "confidence": "medium"}
-            mat = {"value": "Wood & Metal", "confidence": "medium"}
-            col = {"value": "Brown", "confidence": "high"}
-            craft = {"value": "Wood Carving", "confidence": "medium"}
-            st = {"value": "Traditional Handcrafted", "confidence": "medium"}
 
         is_uncertain = any(
             attr["confidence"] in ["low", "uncertain"] or attr["value"] == "Unknown"

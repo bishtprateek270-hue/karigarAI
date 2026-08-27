@@ -199,28 +199,43 @@ class CatalogService:
         return list(dict.fromkeys(cleaned))[:8]
 
     def _offline_fallback_catalog(self, vision_analysis: Dict[str, Any]) -> Dict[str, Any]:
-        product_type = self._get_val(vision_analysis.get("product_type"), "Carved Wooden Box")
-        material = self._get_val(vision_analysis.get("material"), "Wood & Metal")
-        craft_type = self._get_val(vision_analysis.get("craft_type"), "Wood Carving")
+        product_type = self._get_val(vision_analysis.get("product_type"), "Handcrafted Artisan Product")
+        material = self._get_val(vision_analysis.get("material"), "Quality Material")
+        craft_type = self._get_val(vision_analysis.get("craft_type"), "Handicraft")
+
+        if not product_type or product_type.lower() == "unknown":
+            product_type = "Handcrafted Artisan Product"
+        if not material or material.lower() == "unknown":
+            material = "Quality Handcrafted Material"
+        if not craft_type or craft_type.lower() == "unknown":
+            craft_type = "Artisan Crafting"
 
         # Grounded, concise title (strictly under 8-10 words)
         title = f"Handcrafted {product_type}"
         description = (
             f"Authentic {product_type.lower()} meticulously created using traditional {craft_type.lower()} techniques. "
-            f"Made from quality {material.lower()}, this piece is perfect for home decor, storage, or gifting."
+            f"Made from {material.lower()}, this piece is perfect for home decor, personal use, or gifting."
         )
 
         category_map = {
             "box": "Home & Living > Home Decor > Wooden Boxes & Storage",
-            "jewelry": "Home & Living > Home Decor > Wooden Boxes & Storage",
+            "jewelry": "Jewelry & Accessories > Handcrafted Jewelry",
+            "earring": "Jewelry & Accessories > Handcrafted Jewelry > Earrings",
             "pottery": "Home & Living > Home Decor > Pottery & Vases",
+            "pot": "Home & Living > Home Decor > Pottery & Vases",
+            "vase": "Home & Living > Home Decor > Pottery & Vases",
             "statue": "Home & Living > Home Decor > Sculptures & Figurines",
             "wood": "Home & Living > Home Decor > Wooden Artifacts",
             "shawl": "Apparel & Accessories > Ethnic Wear > Handwoven Shawls",
+            "textile": "Apparel & Accessories > Ethnic Wear > Handwoven Textiles",
+            "bag": "Apparel & Accessories > Bags & Purses",
+            "basket": "Home & Living > Home Decor > Baskets & Storage",
             "diya": "Home & Living > Religious & Festive Decor > Brass Artifacts",
+            "brass": "Home & Living > Home Decor > Metal Handicrafts",
+            "metal": "Home & Living > Home Decor > Metal Handicrafts",
         }
 
-        matched_cat = "Home & Living > Home Decor > Wooden Boxes & Storage"
+        matched_cat = "Home & Living > Handcrafted Products"
         for key, cat_val in category_map.items():
             if key in product_type.lower() or key in craft_type.lower() or key in material.lower():
                 matched_cat = cat_val
