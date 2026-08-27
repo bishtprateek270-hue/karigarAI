@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
+import { compressImageFile } from '../utils/imageCompressor';
 import { Edit3, Save, ArrowLeft, Languages } from 'lucide-react';
 
 export const EditProduct = ({ lang = 'en' }) => {
@@ -353,12 +354,15 @@ export const EditProduct = ({ lang = 'en' }) => {
                 type="file"
                 accept=".jpg,.jpeg,.png"
                 className="form-input"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files[0];
                   if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => setImageUrl(reader.result);
-                    reader.readAsDataURL(file);
+                    try {
+                      const compressedUrl = await compressImageFile(file);
+                      setImageUrl(compressedUrl);
+                    } catch (err) {
+                      setError('Failed to process image file.');
+                    }
                   }
                 }}
                 style={{ padding: '8px' }}

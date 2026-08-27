@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { compressImageFile } from '../utils/imageCompressor';
 import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, Languages } from 'lucide-react';
 
 export const AddProduct = ({ lang = 'en' }) => {
@@ -87,7 +88,7 @@ export const AddProduct = ({ lang = 'en' }) => {
     setError('');
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -102,15 +103,16 @@ export const AddProduct = ({ lang = 'en' }) => {
       resetStateForNewImage();
       setSelectedFile(file);
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedUrl = await compressImageFile(file);
+        setPreviewUrl(compressedUrl);
+      } catch (err) {
+        setError('Failed to process image file.');
+      }
     }
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       const ext = file.name.split('.').pop().toLowerCase();
@@ -121,11 +123,12 @@ export const AddProduct = ({ lang = 'en' }) => {
       resetStateForNewImage();
       setSelectedFile(file);
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedUrl = await compressImageFile(file);
+        setPreviewUrl(compressedUrl);
+      } catch (err) {
+        setError('Failed to process image file.');
+      }
     }
   };
 
