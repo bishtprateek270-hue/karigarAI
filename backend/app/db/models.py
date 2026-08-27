@@ -25,7 +25,7 @@ class Product(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    image_url = Column(String(500), nullable=True)
+    image_url = Column(Text, nullable=True)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     category = Column(String(100), nullable=True)

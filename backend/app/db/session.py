@@ -47,9 +47,14 @@ def get_db():
 
 
 def init_db():
-    """Initializes database tables."""
+    """Initializes database tables and ensures schema migrations."""
     try:
+        from sqlalchemy import text
         Base.metadata.create_all(bind=engine)
+        if "postgresql" in str(engine.url).lower():
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE products ALTER COLUMN image_url TYPE TEXT;"))
+                conn.commit()
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
 
