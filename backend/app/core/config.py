@@ -34,6 +34,9 @@ class Settings:
     CLOUDINARY_API_KEY: str = os.getenv("CLOUDINARY_API_KEY", "").strip()
     CLOUDINARY_API_SECRET: str = os.getenv("CLOUDINARY_API_SECRET", "").strip()
 
+    # Resend API Key Configuration
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "").strip()
+
     # SMTP Email Configuration
     SMTP_HOST: str = os.getenv("SMTP_HOST", "").strip()
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
