@@ -247,6 +247,7 @@ def get_me(current_user: User = Depends(get_current_user)):
         "name": current_user.name,
         "email": current_user.email,
         "phone": current_user.phone,
+        "bio": current_user.bio,
     }
 
 
@@ -265,6 +266,8 @@ def update_me(
         current_user.phone = str(payload["phone"]).strip()
     if "name" in payload and payload["name"]:
         current_user.name = str(payload["name"]).strip()
+    if "bio" in payload:
+        current_user.bio = str(payload["bio"]).strip()
     db.commit()
     db.refresh(current_user)
     return {
@@ -272,6 +275,7 @@ def update_me(
         "name": current_user.name,
         "email": current_user.email,
         "phone": current_user.phone,
+        "bio": current_user.bio,
     }
 
 

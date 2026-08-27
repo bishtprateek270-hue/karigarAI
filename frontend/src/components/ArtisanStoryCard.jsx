@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
-import { BookOpen, Sparkles, Copy, Check, Languages } from 'lucide-react';
+import { BookOpen, Sparkles, Copy, Check } from 'lucide-react';
 
 export const ArtisanStoryCard = ({ productName, material, craftType }) => {
   const [story, setStory] = useState(null);
@@ -33,74 +33,109 @@ export const ArtisanStoryCard = ({ productName, material, craftType }) => {
   };
 
   return (
-    <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-6 shadow-sm mb-8 transition-all hover:shadow-md">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-amber-200/60">
-        <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-amber-600 text-white rounded-xl shadow-sm">
-            <BookOpen className="w-5 h-5" />
+    <div className="card" style={{ padding: '24px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', paddingBottom: '16px', borderBottom: '1px solid #fef3c7', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ background: '#d97706', color: '#ffffff', padding: '10px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BookOpen size={22} />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-amber-950 font-serif">Artisan Heritage Story Card</h3>
-            <p className="text-xs text-amber-700">Cultural lineage, craft technique & artisan soul narrative</p>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#78350f', margin: 0 }}>Artisan Heritage Story Card</h3>
+            <p style={{ fontSize: '0.85rem', color: '#92400e', margin: '2px 0 0 0' }}>Cultural lineage, craft technique & artisan soul narrative</p>
           </div>
         </div>
 
         {story && (
-          <div className="flex items-center space-x-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={() => setActiveLang('en')}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                activeLang === 'en'
-                  ? 'bg-amber-700 text-white shadow-sm'
-                  : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-              }`}
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                background: activeLang === 'en' ? '#b45309' : '#fef3c7',
+                color: activeLang === 'en' ? '#ffffff' : '#92400e',
+              }}
             >
               English
             </button>
             <button
               onClick={() => setActiveLang('hi')}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                activeLang === 'hi'
-                  ? 'bg-amber-700 text-white shadow-sm'
-                  : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-              }`}
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                background: activeLang === 'hi' ? '#b45309' : '#fef3c7',
+                color: activeLang === 'hi' ? '#ffffff' : '#92400e',
+              }}
             >
               हिंदी
             </button>
             <button
               onClick={handleCopyText}
-              className="p-1.5 bg-white border border-amber-300 text-amber-800 rounded-lg hover:bg-amber-100 transition-all flex items-center space-x-1 text-xs px-2.5"
-              title="Copy Story Text"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '6px 12px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                borderRadius: '8px',
+                border: '1px solid #fcd34d',
+                background: '#ffffff',
+                color: '#78350f',
+                cursor: 'pointer',
+              }}
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check size={14} color="#16a34a" /> : <Copy size={14} />}
               <span>{copied ? 'Copied' : 'Copy'}</span>
             </button>
           </div>
         )}
       </div>
 
-      {error && <div className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-lg mb-3">{error}</div>}
+      {error && <div style={{ fontSize: '0.85rem', color: '#b91c1c', background: '#fef2f2', padding: '10px 14px', borderRadius: '8px', marginBottom: '12px' }}>{error}</div>}
 
       {!story ? (
-        <div className="text-center py-4">
-          <p className="text-sm text-amber-800 mb-4 max-w-lg mx-auto">
+        <div style={{ textAlign: 'center', padding: '16px 0' }}>
+          <p style={{ fontSize: '0.9rem', color: '#92400e', marginBottom: '16px' }}>
             Generate an authentic cultural narrative highlighting the heritage and craftsmanship behind this piece.
           </p>
           <button
             onClick={handleGenerateStory}
             disabled={loading}
-            className="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-700 to-amber-800 hover:from-amber-800 hover:to-amber-900 text-white font-medium px-5 py-2.5 rounded-xl shadow-sm text-sm transition-all disabled:opacity-50 hover:shadow-md"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'linear-gradient(135deg, #b45309 0%, #78350f 100%)',
+              color: '#ffffff',
+              fontWeight: '700',
+              fontSize: '0.9rem',
+              padding: '10px 20px',
+              borderRadius: '12px',
+              border: 'none',
+              cursor: loading ? 'wait' : 'pointer',
+              boxShadow: '0 2px 6px rgba(180,83,9,0.3)',
+              opacity: loading ? 0.7 : 1,
+            }}
           >
-            <Sparkles className="w-4 h-4 animate-spin-slow" />
+            <Sparkles size={16} />
             <span>{loading ? 'Crafting Story...' : 'Generate Heritage Story Card'}</span>
           </button>
         </div>
       ) : (
-        <div className="space-y-3 text-amber-950 font-serif leading-relaxed text-sm bg-white/80 p-4 rounded-xl border border-amber-200/60 shadow-inner">
+        <div style={{ background: 'rgba(255,255,255,0.9)', padding: '18px', borderRadius: '12px', border: '1px solid #fde68a', color: '#451a03', fontSize: '0.92rem', lineHeight: '1.7' }}>
           {(activeLang === 'hi' ? story.story_hi : story.story_en)
             .split('\n\n')
             .map((paragraph, index) => (
-              <p key={index} className="first-letter:text-lg first-letter:font-bold first-letter:text-amber-800">
+              <p key={index} style={{ marginBottom: index === 0 ? '12px' : 0 }}>
                 {paragraph}
               </p>
             ))}

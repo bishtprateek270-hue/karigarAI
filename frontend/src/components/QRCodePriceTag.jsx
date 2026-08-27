@@ -110,43 +110,55 @@ export const QRCodePriceTag = ({ product }) => {
   };
 
   return (
-    <div className="bg-white border border-amber-200 rounded-2xl p-6 shadow-sm mb-8">
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-amber-100">
-        <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-amber-100 text-amber-800 rounded-xl">
-            <Tag className="w-5 h-5" />
+    <div className="card" style={{ padding: '24px', background: '#ffffff', border: '1px solid #fef3c7', borderRadius: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', paddingBottom: '16px', borderBottom: '1px solid #fef3c7', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ background: '#fef3c7', color: '#92400e', padding: '10px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Tag size={22} />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gray-900 font-serif">Exhibition QR Code Price Tag</h3>
-            <p className="text-xs text-gray-500">Print physical tags for fairs, markets, & shop displays</p>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>Exhibition QR Code Price Tag</h3>
+            <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: '2px 0 0 0' }}>Print physical tags for fairs, markets, & shop displays</p>
           </div>
         </div>
 
         <button
           onClick={handlePrint}
-          className="inline-flex items-center space-x-2 bg-amber-700 hover:bg-amber-800 text-white font-medium px-4 py-2 rounded-xl text-xs shadow-sm transition-all"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: '#b45309',
+            color: '#ffffff',
+            fontWeight: '600',
+            fontSize: '0.85rem',
+            padding: '10px 18px',
+            borderRadius: '10px',
+            border: 'none',
+            cursor: 'pointer',
+          }}
         >
-          <Printer className="w-4 h-4" />
+          <Printer size={16} />
           <span>Print Price Tag</span>
         </button>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-amber-50/40 p-5 rounded-xl border border-amber-100" ref={printRef}>
-        <div className="text-center sm:text-left flex-1">
-          <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-            <Sparkles className="w-3 h-3" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px', background: '#fffbeb', padding: '20px', borderRadius: '12px', border: '1px solid #fef3c7' }} ref={printRef}>
+        <div style={{ flex: '1 1 200px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: '#fef3c7', color: '#92400e', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+            <Sparkles size={12} />
             <span>KarigarAI Authentic Craft</span>
           </div>
-          <h4 className="text-base font-bold text-gray-900 mb-1">{product.title}</h4>
-          <p className="text-xs text-gray-600 mb-3">
+          <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1f2937', margin: '0 0 6px 0' }}>{product.title}</h4>
+          <p style={{ fontSize: '0.85rem', color: '#4b5563', margin: '0 0 12px 0' }}>
             {product.material ? `Material: ${product.material}` : ''} {product.craft_type ? `• Craft: ${product.craft_type}` : ''}
           </p>
-          <div className="text-2xl font-black text-amber-800">{formattedPrice}</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: '800', color: '#92400e' }}>{formattedPrice}</div>
         </div>
 
-        <div className="qr-wrapper flex flex-col items-center p-3 bg-white border border-amber-200 rounded-xl shadow-sm">
+        <div className="qr-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px', background: '#ffffff', border: '1px solid #fde68a', borderRadius: '12px' }}>
           <QRCodeSVG value={currentUrl} size={110} level="M" includeMargin={false} />
-          <span className="text-[10px] text-amber-800 font-medium mt-2">Scan for Product Page</span>
+          <span style={{ fontSize: '0.75rem', color: '#92400e', fontWeight: '600', marginTop: '8px' }}>Scan for Product Page</span>
         </div>
       </div>
     </div>

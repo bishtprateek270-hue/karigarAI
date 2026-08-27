@@ -34,33 +34,46 @@ Is this product available for order?`;
   const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
 
   return (
-    <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-6 shadow-sm mb-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-emerald-200/60">
-        <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-[#25D366] text-white rounded-xl shadow-sm">
-            <MessageCircle className="w-5 h-5" />
+    <div className="card" style={{ padding: '24px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', paddingBottom: '16px', borderBottom: '1px solid #dcfce7', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ background: '#25D366', color: '#ffffff', padding: '10px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <MessageCircle size={22} />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-emerald-950 font-serif">WhatsApp Direct Ordering</h3>
-            <p className="text-xs text-emerald-700">Connect directly with the artisan on WhatsApp</p>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#064e3b', margin: 0 }}>WhatsApp Direct Ordering</h3>
+            <p style={{ fontSize: '0.85rem', color: '#166534', margin: '2px 0 0 0' }}>Connect directly with the artisan on WhatsApp</p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 text-xs text-emerald-800 bg-emerald-100/80 px-3 py-1.5 rounded-lg">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <span className="font-semibold">Verified Artisan WhatsApp:</span>
-          <span className="font-mono font-bold">+{cleanPhone}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#dcfce7', color: '#14532d', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600' }}>
+          <CheckCircle2 size={16} color="#16a34a" />
+          <span>Verified Artisan WhatsApp: <strong>+{cleanPhone}</strong></span>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-3">
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
         <a
           href={whatsappOrderUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full sm:w-auto flex-1 inline-flex items-center justify-center space-x-2 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold px-6 py-3 rounded-xl shadow-sm text-sm transition-all hover:shadow-md"
+          style={{
+            flex: '1 1 240px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            background: '#25D366',
+            color: '#ffffff',
+            fontWeight: '700',
+            fontSize: '0.95rem',
+            padding: '12px 24px',
+            borderRadius: '12px',
+            textDecoration: 'none',
+            boxShadow: '0 2px 6px rgba(37,211,102,0.3)',
+          }}
         >
-          <MessageCircle className="w-5 h-5" />
+          <MessageCircle size={20} />
           <span>Order Directly via WhatsApp</span>
         </a>
 
@@ -68,9 +81,22 @@ Is this product available for order?`;
           href={whatsappShareUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 font-semibold px-5 py-3 rounded-xl text-sm transition-all shadow-sm"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            background: '#ffffff',
+            color: '#166534',
+            border: '1px solid #86efac',
+            fontWeight: '600',
+            fontSize: '0.9rem',
+            padding: '12px 20px',
+            borderRadius: '12px',
+            textDecoration: 'none',
+          }}
         >
-          <Share2 className="w-4 h-4 text-emerald-600" />
+          <Share2 size={18} />
           <span>Share Listing</span>
         </a>
       </div>
