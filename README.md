@@ -78,28 +78,28 @@ Artisans often face challenges in writing marketing titles, setting competitive 
 ## 📐 Architecture Diagram
 
 ```text
- ┌───────────────────────────────────────────────────────────────┐
- │                   KarigarAI React Web Portal                  │
- │   Dashboard | Add Product | Preview | My Products | Profile  │
- └───────────────────────────────┬───────────────────────────────┘
-                                 │
-                                 │ HTTP REST (JWT Bearer Auth)
-                                 ▼
- ┌───────────────────────────────────────────────────────────────┐
- │                     FastAPI Backend API Server                │
- │  ┌─────────────────┐  ┌──────────────────┐  ┌──────────────┐ │
- │  │ Auth & User API │  │  Vision AI API   │  │ Pricing API  │ │
- │  └────────┬────────┘  └────────┬─────────┘  └──────┬───────┘ │
- │           │                    │                   │         │
- │  ┌────────▼────────┐  ┌────────▼─────────┐  ┌──────▼───────┐ │
- │  │ SQLAlchemy ORM  │  │ Resend Email OTP │  │ Catalog &    │ │
- │  │ User & Product  │  │ Service          │  │ Story Engine │ │
- │  └────────┬────────┘  └──────────────────┘  └──────────────┘ │
- └───────────┼───────────────────────────────────────────────────┘
+ ┌─────────────────────────────────────────────────────────────────────────────┐
+ │                         KarigarAI React Web Portal                          │
+ │  Marketplace | Dashboard | Add Product | Preview | My Products | Profile   │
+ └──────────────────────────────────────┬──────────────────────────────────────┘
+                                        │
+                                        │ HTTP REST (JWT Bearer Auth)
+                                        ▼
+ ┌─────────────────────────────────────────────────────────────────────────────┐
+ │                           FastAPI Backend API Server                        │
+ │  ┌─────────────────┐  ┌──────────────────┐  ┌────────────────────────────┐  │
+ │  │ Auth & User API │  │  Vision AI API   │  │ Pricing & Translation API  │  │
+ │  └────────┬────────┘  └────────┬─────────┘  └─────────────┬──────────────┘  │
+ │           │                    │                          │                 │
+ │  ┌────────▼────────┐  ┌────────▼─────────┐  ┌─────────────▼──────────────┐  │
+ │  │ SQLAlchemy ORM  │  │ Resend Email OTP │  │ Public Marketplace, Catalog│  │
+ │  │ User & Product  │  │ Service          │  │ & Artisan Story Engine     │  │
+ │  └────────┬────────┘  └──────────────────┘  └────────────────────────────┘  │
+ └───────────┼─────────────────────────────────────────────────────────────────┘
              │
- ┌───────────▼───────────────────────────────────────────────────┐
- │      Neon PostgreSQL Database (Fallback: SQLite karigarai.db) │
- └───────────────────────────────────────────────────────────────┘
+ ┌───────────▼─────────────────────────────────────────────────────────────────┐
+ │        Neon PostgreSQL Database (Fallback: Local SQLite karigarai.db)       │
+ └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -109,6 +109,7 @@ Artisans often face challenges in writing marketing titles, setting competitive 
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
 | `GET` | `/health` | No | Server status & health check |
+| `GET` | `/public/products` | No | Public buyer marketplace product list |
 | `POST` | `/register` | No | Register new artisan account |
 | `POST` | `/login` | No | Authenticate credentials & receive JWT token |
 | `POST` | `/forgot-password/request-otp` | No | Generate & dispatch 6-digit email OTP via Resend |
