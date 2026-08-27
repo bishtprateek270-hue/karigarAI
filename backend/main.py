@@ -235,6 +235,46 @@ def login_root(req: UserLoginRequest, db: Session = Depends(get_db)):
     return login_user(req, db)
 
 
+@app.get(
+    "/me",
+    status_code=status.HTTP_200_OK,
+    tags=["Authentication"],
+    summary="Get authenticated user profile",
+)
+def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "phone": current_user.phone,
+    }
+
+
+@app.put(
+    "/me",
+    status_code=status.HTTP_200_OK,
+    tags=["Authentication"],
+    summary="Update user profile",
+)
+def update_me(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if "phone" in payload:
+        current_user.phone = str(payload["phone"]).strip()
+    if "name" in payload and payload["name"]:
+        current_user.name = str(payload["name"]).strip()
+    db.commit()
+    db.refresh(current_user)
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "phone": current_user.phone,
+    }
+
+
 @app.post(
     "/products",
     response_model=ProductDBResponse,

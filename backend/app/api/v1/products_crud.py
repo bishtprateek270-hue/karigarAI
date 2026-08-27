@@ -35,6 +35,7 @@ def _parse_tags_output(tags_str: str | None) -> List[str]:
 
 
 def _to_product_response(product: Product) -> ProductDBResponse:
+    owner_phone = product.owner.phone if (hasattr(product, "owner") and product.owner) else None
     return ProductDBResponse(
         id=product.id,
         user_id=product.user_id,
@@ -52,6 +53,7 @@ def _to_product_response(product: Product) -> ProductDBResponse:
         suggested_price=product.suggested_price,
         status=product.status,
         created_at=product.created_at,
+        owner_phone=owner_phone,
     )
 
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 import { Sparkles, Package, PlusCircle, LayoutDashboard, LogOut, User as UserIcon, Globe } from 'lucide-react';
 
 export const Navbar = ({ currentLang = 'en', onLangChange }) => {
@@ -63,7 +64,30 @@ export const Navbar = ({ currentLang = 'en', onLangChange }) => {
                 <span>{currentLang === 'hi' ? 'मेरे उत्पाद' : 'My Products'}</span>
               </Link>
 
-              <div className="user-badge">
+              <div 
+                className="user-badge"
+                style={{ cursor: 'pointer' }}
+                onClick={async () => {
+                  try {
+                    const profile = await api.getProfile();
+                    const currentPhone = profile.phone || '919876543210';
+                    const newPhone = window.prompt('Update your Artisan WhatsApp phone number (with country code):', currentPhone);
+                    if (newPhone !== null && newPhone.trim()) {
+                      const cleaned = newPhone.replace(/\D/g, '');
+                      if (cleaned.length >= 10) {
+                        await api.updateProfile({ phone: cleaned });
+                        localStorage.setItem('karigar_whatsapp_phone', cleaned);
+                        alert('Artisan WhatsApp phone number saved to your profile!');
+                      } else {
+                        alert('Please enter a valid phone number with country code (e.g. 919876543210).');
+                      }
+                    }
+                  } catch (e) {
+                    alert(e.message || 'Failed to update profile.');
+                  }
+                }}
+                title="Click to update your WhatsApp phone number"
+              >
                 <UserIcon size={14} />
                 <span>{user.name}</span>
               </div>

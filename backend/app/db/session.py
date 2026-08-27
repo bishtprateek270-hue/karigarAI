@@ -51,10 +51,17 @@ def init_db():
     try:
         from sqlalchemy import text
         Base.metadata.create_all(bind=engine)
-        if "postgresql" in str(engine.url).lower():
-            with engine.connect() as conn:
+        with engine.connect() as conn:
+            if "postgresql" in str(engine.url).lower():
                 conn.execute(text("ALTER TABLE products ALTER COLUMN image_url TYPE TEXT;"))
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);"))
                 conn.commit()
+            elif "sqlite" in str(engine.url).lower():
+                try:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR(50);"))
+                    conn.commit()
+                except Exception:
+                    pass
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
 

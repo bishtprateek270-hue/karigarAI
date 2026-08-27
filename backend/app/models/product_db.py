@@ -59,6 +59,7 @@ class ProductDBResponse(BaseModel):
     suggested_price: Optional[float] = None
     status: str
     created_at: datetime
+    owner_phone: Optional[str] = None
 
     class Config:
         from_attributes = True

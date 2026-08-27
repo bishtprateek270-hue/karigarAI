@@ -75,6 +75,26 @@ export const api = {
     return handleResponse(res);
   },
 
+  async getProfile() {
+    const res = await fetch(`${API_BASE_URL}/me`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async updateProfile(profileData) {
+    const res = await fetch(`${API_BASE_URL}/me`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(profileData),
+    });
+    return handleResponse(res);
+  },
+
   // AI & Pricing API
   async analyzeProduct(imageFile) {
     const formData = new FormData();
