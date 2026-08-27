@@ -6,7 +6,7 @@
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-karigar--ai--amber.vercel.app-d97706?style=for-the-badge&logo=vercel)](https://karigar-ai-amber.vercel.app)
 [![API Status](https://img.shields.io/badge/API_Status-Online-10b981?style=for-the-badge&logo=fastapi)](https://karigar-ai-8nik.vercel.app/health)
-[![License](https://img.shields.io/badge/License-MIT-blue.style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![Python Version](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![React Version](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 
