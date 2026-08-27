@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { PlusCircle, Package, Sparkles, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
+import { ProductImage } from '../components/ProductImage';
 
 export const Dashboard = ({ lang = 'en' }) => {
-
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -134,11 +134,7 @@ export const Dashboard = ({ lang = 'en' }) => {
             {products.slice(0, 3).map((p) => (
               <div key={p.id} className="card" style={{ padding: '16px', background: '#fff', border: '1px solid var(--border-color)' }}>
                 <div style={{ height: '160px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f0ebe4', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {p.image_url ? (
-                    <img src={p.image_url} alt={getDisplayTitle(p)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <Package size={48} color="#a0948c" />
-                  )}
+                  <ProductImage src={p.image_url} alt={getDisplayTitle(p)} iconSize={48} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                   <span className={`badge ${p.status === 'published' ? 'badge-published' : 'badge-draft'}`}>

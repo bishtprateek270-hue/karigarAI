@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Package, ArrowLeft, Edit3, Trash2, Tag, Calendar } from 'lucide-react';
+import { ProductImage } from '../components/ProductImage';
 
 export const ProductDetails = ({ lang = 'en' }) => {
   const { id } = useParams();
@@ -71,7 +72,7 @@ export const ProductDetails = ({ lang = 'en' }) => {
           <Link to={`/edit-product/${product.id}`} className="btn-primary">
             <Edit3 size={16} /> {lang === 'hi' ? 'संपादित करें' : 'Edit Listing'}
           </Link>
-          <button onClick={handleDelete} className="btn-danger">
+          <button type="button" onClick={handleDelete} className="btn-danger">
             <Trash2 size={16} /> {lang === 'hi' ? 'हटाएं' : 'Delete'}
           </button>
         </div>
@@ -81,11 +82,7 @@ export const ProductDetails = ({ lang = 'en' }) => {
         {/* Left Column: Image Box */}
         <div className="card" style={{ padding: '20px' }}>
           <div style={{ width: '100%', height: '360px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#f0ebe4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {product.image_url ? (
-              <img src={product.image_url} alt={displayTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <Package size={80} color="#a0948c" />
-            )}
+            <ProductImage src={product.image_url} alt={displayTitle} iconSize={80} />
           </div>
         </div>
 

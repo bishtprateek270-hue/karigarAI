@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Package, PlusCircle, Trash2, Edit3, Eye, Search } from 'lucide-react';
+import { ProductImage } from '../components/ProductImage';
 
 export const MyProducts = ({ lang = 'en' }) => {
   const [products, setProducts] = useState([]);
@@ -78,6 +79,7 @@ export const MyProducts = ({ lang = 'en' }) => {
       <div className="card" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
+            type="button"
             className={`btn-secondary ${filterStatus === 'all' ? 'btn-primary' : ''}`}
             onClick={() => setFilterStatus('all')}
             style={{ padding: '6px 14px', fontSize: '0.88rem' }}
@@ -85,6 +87,7 @@ export const MyProducts = ({ lang = 'en' }) => {
             {lang === 'hi' ? 'सभी' : 'All'} ({products.length})
           </button>
           <button
+            type="button"
             className={`btn-secondary ${filterStatus === 'published' ? 'btn-primary' : ''}`}
             onClick={() => setFilterStatus('published')}
             style={{ padding: '6px 14px', fontSize: '0.88rem' }}
@@ -92,6 +95,7 @@ export const MyProducts = ({ lang = 'en' }) => {
             {lang === 'hi' ? 'प्रकाशित' : 'Published'} ({products.filter(p => p.status === 'published').length})
           </button>
           <button
+            type="button"
             className={`btn-secondary ${filterStatus === 'draft' ? 'btn-primary' : ''}`}
             onClick={() => setFilterStatus('draft')}
             style={{ padding: '6px 14px', fontSize: '0.88rem' }}
@@ -135,11 +139,7 @@ export const MyProducts = ({ lang = 'en' }) => {
             <div key={product.id} className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ height: '180px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f0ebe4', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  {product.image_url ? (
-                    <img src={product.image_url} alt={getDisplayTitle(product)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <Package size={56} color="#a0948c" />
-                  )}
+                  <ProductImage src={product.image_url} alt={getDisplayTitle(product)} iconSize={56} />
                   <span className={`badge ${product.status === 'published' ? 'badge-published' : 'badge-draft'}`} style={{ position: 'absolute', top: '10px', right: '10px', boxShadow: 'var(--shadow-sm)' }}>
                     {product.status}
                   </span>

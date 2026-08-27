@@ -39,7 +39,13 @@ export const AddProduct = ({ lang = 'en' }) => {
       }
       setError('');
       setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+
       setAiAnalysis(null);
       setAttributesConfirmed(false);
     }
@@ -56,7 +62,13 @@ export const AddProduct = ({ lang = 'en' }) => {
       }
       setError('');
       setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+
       setAiAnalysis(null);
       setAttributesConfirmed(false);
     }
@@ -330,6 +342,7 @@ export const AddProduct = ({ lang = 'en' }) => {
             </div>
 
             <button
+              type="button"
               onClick={handleAnalyze}
               className="btn-primary"
               style={{ width: '100%', padding: '12px' }}
