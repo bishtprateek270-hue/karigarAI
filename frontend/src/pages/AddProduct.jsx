@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, CheckCircle, Languages, AlertTriangle, CheckSquare } from 'lucide-react';
-
+import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, Languages, CheckCircle } from 'lucide-react';
 
 export const AddProduct = ({ lang = 'en' }) => {
   const navigate = useNavigate();
@@ -12,21 +11,25 @@ export const AddProduct = ({ lang = 'en' }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Step 2: AI Analysis & Error State
-  const [analyzing, setAnalyzing] = useState(false);
-  const [aiAnalysis, setAiAnalysis] = useState(null);
+  // Step 2: Artisan-Provided Product & Production Cost Inputs
+  const [productName, setProductName] = useState('');
+  const [material, setMaterial] = useState('');
+  const [craftType, setCraftType] = useState('');
+  const [productSize, setProductSize] = useState('medium');
+  const [basicDescription, setBasicDescription] = useState('');
+
+  // Production Cost & Labor Inputs
+  const [materialCost, setMaterialCost] = useState(300);
+  const [makingHours, setMakingHours] = useState(5);
+  const [hourlyRate, setHourlyRate] = useState(100);
+  const [profitMargin, setProfitMargin] = useState(25);
+
+  // Generation & Status State
+  const [generatingCatalog, setGeneratingCatalog] = useState(false);
+  const [catalogGenerated, setCatalogGenerated] = useState(false);
   const [error, setError] = useState('');
 
-  // Step 2.5: Review & Correct Attributes State
-  const [attrProductType, setAttrProductType] = useState('');
-  const [attrMaterial, setAttrMaterial] = useState('');
-  const [attrPrimaryColor, setAttrPrimaryColor] = useState('');
-  const [attrCraftType, setAttrCraftType] = useState('');
-  const [attrStyle, setAttrStyle] = useState('');
-  const [attributesConfirmed, setAttributesConfirmed] = useState(false);
-  const [generatingCatalog, setGeneratingCatalog] = useState(false);
-
-  // Step 3: Editable Catalog Form State (English & Hindi)
+  // Step 3: AI Generated & Editable Catalog State (English & Hindi)
   const [activeTabLang, setActiveTabLang] = useState(lang);
   const [translating, setTranslating] = useState(false);
 
@@ -42,21 +45,10 @@ export const AddProduct = ({ lang = 'en' }) => {
   const [categoryHi, setCategoryHi] = useState('');
   const [tagsHi, setTagsHi] = useState('');
 
-  // Shared Common Product Properties
-  const [material, setMaterial] = useState('');
-  const [craftType, setCraftType] = useState('');
-  const [status, setStatus] = useState('published');
-  const [suggestedPrice, setSuggestedPrice] = useState('');
-
-  // Step 4: Pricing Engine Calculation Form State
-  const [calculatingPrice, setCalculatingPrice] = useState(false);
-  const [materialCost, setMaterialCost] = useState(300);
-  const [makingHours, setMakingHours] = useState(5);
-  const [hourlyRate, setHourlyRate] = useState(100);
-  const [productSize, setProductSize] = useState('medium');
+  // Price Recommendation & Saving State
   const [priceTiers, setPriceTiers] = useState(null);
-
-  // Saving State
+  const [suggestedPrice, setSuggestedPrice] = useState('');
+  const [status, setStatus] = useState('published');
   const [saving, setSaving] = useState(false);
 
   // Handle File Drag and Drop Events
@@ -72,15 +64,8 @@ export const AddProduct = ({ lang = 'en' }) => {
     setIsDragging(false);
   };
 
-  // Clear previous analysis, confirmed attributes, and catalog data when changing image
   const resetStateForNewImage = () => {
-    setAiAnalysis(null);
-    setAttributesConfirmed(false);
-    setAttrProductType('');
-    setAttrMaterial('');
-    setAttrPrimaryColor('');
-    setAttrCraftType('');
-    setAttrStyle('');
+    setCatalogGenerated(false);
     setTitle('');
     setDescription('');
     setCategory('');
@@ -89,10 +74,8 @@ export const AddProduct = ({ lang = 'en' }) => {
     setDescriptionHi('');
     setCategoryHi('');
     setTagsHi('');
-    setMaterial('');
-    setCraftType('');
-    setSuggestedPrice('');
     setPriceTiers(null);
+    setSuggestedPrice('');
     setError('');
   };
 
@@ -119,7 +102,6 @@ export const AddProduct = ({ lang = 'en' }) => {
     }
   };
 
-  // Handle File Change & Image Preview
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -139,56 +121,10 @@ export const AddProduct = ({ lang = 'en' }) => {
     }
   };
 
-
-  // Run Vision AI Analysis (/analyze-product)
-  const handleAnalyze = async () => {
-    if (!selectedFile) {
-      setError('Please select an artisan craft image first.');
-      return;
-    }
-    setError('');
-    setAnalyzing(true);
-    setAttributesConfirmed(false);
-
-    try {
-      const res = await api.analyzeProduct(selectedFile);
-      setAiAnalysis(res.analysis);
-      if (res.image_url) {
-        setPreviewUrl(res.image_url);
-      }
-
-      // Extract vision attributes into editable state
-      const attrs = res.analysis.attributes || {};
-      const pt = attrs.product_type?.value || res.analysis.product_type || '';
-      const mat = attrs.material?.value || res.analysis.material || '';
-      const col = attrs.primary_color?.value || res.analysis.primary_color || '';
-      const craft = attrs.craft_type?.value || res.analysis.craft_type || '';
-      const st = attrs.style?.value || res.analysis.style || '';
-
-      setAttrProductType(pt === 'Unknown' ? '' : pt);
-      setAttrMaterial(mat === 'Unknown' ? '' : mat);
-      setAttrPrimaryColor(col === 'Unknown' ? '' : col);
-      setAttrCraftType(craft === 'Unknown' ? '' : craft);
-      setAttrStyle(st === 'Unknown' ? '' : st);
-
-      // If initial AI response already had catalog, store it as draft catalog
-      if (res.catalog) {
-        setTitle(res.catalog.title || '');
-        setDescription(res.catalog.description || '');
-        setCategory(res.catalog.category || '');
-        setTags(Array.isArray(res.catalog.tags) ? res.catalog.tags.join(', ') : res.catalog.tags || '');
-      }
-    } catch (err) {
-      setError(err.message || 'Vision AI analysis failed. Please check backend server.');
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
-  // Confirm Attributes & Generate Final Catalog (/generate-catalog)
-  const handleConfirmAttributes = async () => {
-    if (!attrProductType || !attrMaterial || !attrCraftType) {
-      setError('Please provide at least Product Type, Material, and Craft Type before generating catalog.');
+  // Generate Professional Catalog & Price Recommendation
+  const handleGenerateCatalogAndPrice = async () => {
+    if (!productName || !material || !craftType) {
+      setError('Please fill in Product Name, Material, and Craft Type first.');
       return;
     }
 
@@ -196,27 +132,40 @@ export const AddProduct = ({ lang = 'en' }) => {
     setGeneratingCatalog(true);
 
     try {
-      const confirmedPayload = {
-        product_type: attrProductType,
-        material: attrMaterial,
-        primary_color: attrPrimaryColor || 'Natural',
-        craft_type: attrCraftType,
-        style: attrStyle || 'Traditional Handcrafted',
+      // 1. Call Catalog Generation API with Artisan Facts
+      const catalogPayload = {
+        product_name: productName,
+        material: material,
+        craft_type: craftType,
+        product_size: productSize,
+        basic_description: basicDescription,
       };
 
-      const res = await api.generateCatalog(confirmedPayload);
-      const cat = res.catalog || res;
+      const catalogRes = await api.generateCatalog(catalogPayload);
+      const cat = catalogRes.catalog || catalogRes;
 
-      setTitle(cat.title || '');
-      setDescription(cat.description || '');
-      setCategory(cat.category || '');
+      setTitle(cat.title || `Handcrafted ${productName}`);
+      setDescription(cat.description || basicDescription);
+      setCategory(cat.category || 'Home & Living > Handcrafted Products');
       setTags(Array.isArray(cat.tags) ? cat.tags.join(', ') : cat.tags || '');
 
-      setMaterial(attrMaterial);
-      setCraftType(attrCraftType);
-      setAttributesConfirmed(true);
+      // 2. Call Price Calculation API
+      const pricePayload = {
+        material_cost: parseFloat(materialCost) || 0,
+        making_time_hours: parseFloat(makingHours) || 0,
+        hourly_rate: parseFloat(hourlyRate) || 0,
+        product_size: productSize,
+        craft_category: craftType,
+        profit_margin: parseFloat(profitMargin) || 25,
+      };
+
+      const priceRes = await api.suggestPrice(pricePayload);
+      setPriceTiers(priceRes);
+      setSuggestedPrice(priceRes.recommended_price);
+
+      setCatalogGenerated(true);
     } catch (err) {
-      setError(err.message || 'Failed to generate catalog from confirmed attributes.');
+      setError(err.message || 'Failed to generate catalog or calculate price recommendation.');
     } finally {
       setGeneratingCatalog(false);
     }
@@ -257,29 +206,6 @@ export const AddProduct = ({ lang = 'en' }) => {
     }
   };
 
-  // Calculate Price Suggestion (/suggest-price)
-  const handleCalculatePrice = async () => {
-    setCalculatingPrice(true);
-    setError('');
-
-    try {
-      const payload = {
-        material_cost: parseFloat(materialCost) || 0,
-        making_time_hours: parseFloat(makingHours) || 0,
-        hourly_rate: parseFloat(hourlyRate) || 0,
-        product_size: productSize,
-        craft_category: craftType || attrCraftType || 'general',
-      };
-      const res = await api.suggestPrice(payload);
-      setPriceTiers(res);
-      setSuggestedPrice(res.recommended_price);
-    } catch (err) {
-      setError(err.message || 'Price calculation failed.');
-    } finally {
-      setCalculatingPrice(false);
-    }
-  };
-
   // Save Final Product to Database (POST /products)
   const handleSaveProduct = async (e) => {
     e.preventDefault();
@@ -298,10 +224,10 @@ export const AddProduct = ({ lang = 'en' }) => {
 
       const productPayload = {
         title: title || titleHi,
-        description,
+        description: description || basicDescription,
         category,
-        material: material || attrMaterial,
-        craft_type: craftType || attrCraftType,
+        material,
+        craft_type: craftType,
         tags: tagsArray,
         title_hi: titleHi || null,
         description_hi: descriptionHi || null,
@@ -321,23 +247,6 @@ export const AddProduct = ({ lang = 'en' }) => {
     }
   };
 
-  const getConfidenceBadge = (meta) => {
-    const conf = meta?.confidence?.toLowerCase() || 'medium';
-    const val = meta?.value;
-
-    if (conf === 'high' && val !== 'Unknown') {
-      return <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>🟢 High Confidence</span>;
-    }
-    if (conf === 'medium' && val !== 'Unknown') {
-      return <span style={{ background: '#fef9c3', color: '#a16207', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>🟡 Medium Confidence</span>;
-    }
-    return (
-      <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        ⚠️ Please verify
-      </span>
-    );
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
@@ -345,32 +254,34 @@ export const AddProduct = ({ lang = 'en' }) => {
           {lang === 'hi' ? 'उत्पाद जोड़ें और AI विवरण बनाएं' : 'Add Artisan Product & Generate AI Listing'}
         </h1>
         <p style={{ color: 'var(--text-muted)' }}>
-          {lang === 'hi' ? 'अपनी फोटो अपलोड करें ➔ AI गुणों की समीक्षा करें ➔ कैटलॉग बनाएं ➔ मूल्य सहेजें।' : 'Upload Image ➔ Review/Correct AI Attributes ➔ Confirm ➔ Generate Catalog ➔ Price ➔ Save'}
+          {lang === 'hi'
+            ? 'फोटो अपलोड करें ➔ विवरण और लागत दर्ज करें ➔ AI कैटलॉग और मूल्य प्राप्त करें ➔ समीक्षा और सहेजें'
+            : 'Upload Image ➔ Enter Product Details & Production Costs ➔ Generate AI Catalog & Price ➔ Review & Save'}
         </p>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
 
       <div className="grid-2">
-        {/* Left Column: Image Upload & Review AI Attributes */}
+        {/* Left Column: Step 1 (Upload Image) & Step 2 (Artisan Inputs) */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ImageIcon size={20} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 1: फोटो अपलोड करें' : 'Step 1: Upload Craft Image'}
+            <h3 style={{ fontSize: '1.15rem', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ImageIcon size={20} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 1: उत्पाद फोटो अपलोड करें' : 'Step 1: Upload Craft Image'}
             </h3>
 
             <div
               style={{
                 border: isDragging ? '2px dashed var(--primary-color)' : '2px dashed var(--border-color)',
                 borderRadius: 'var(--radius-md)',
-                padding: '20px',
+                padding: '16px',
                 textAlign: 'center',
                 backgroundColor: isDragging ? '#fdf3ef' : '#faf7f3',
                 marginBottom: '16px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
               }}
-              onClick={() => document.getElementById('craft-image-input-ph8').click()}
+              onClick={() => document.getElementById('craft-image-input-ph9').click()}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -380,186 +291,196 @@ export const AddProduct = ({ lang = 'en' }) => {
                   <img
                     src={previewUrl}
                     alt="Craft Preview"
-                    style={{ maxHeight: '220px', width: '100%', objectFit: 'contain', borderRadius: '8px' }}
+                    style={{ maxHeight: '200px', width: '100%', objectFit: 'contain', borderRadius: '8px' }}
                   />
-                  <p style={{ marginTop: '8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  <p style={{ marginTop: '8px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                     {lang === 'hi' ? 'फोटो बदलने के लिए क्लिक करें' : 'Click to replace image'}
                   </p>
                 </div>
               ) : (
                 <div>
-                  <UploadCloud size={44} color="var(--primary-color)" style={{ marginBottom: '10px' }} />
-                  <h4 style={{ fontSize: '1rem', marginBottom: '4px' }}>
+                  <UploadCloud size={40} color="var(--primary-color)" style={{ marginBottom: '8px' }} />
+                  <h4 style={{ fontSize: '0.95rem', marginBottom: '4px' }}>
                     {lang === 'hi' ? 'हस्तशिल्प फोटो चुनें या खींचें' : 'Choose or drag craft image'}
                   </h4>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    {lang === 'hi' ? 'समर्थित प्रारूप: JPG, JPEG, PNG (अधिकतम 10MB)' : 'Supports JPG, JPEG, PNG (max 10MB)'}
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {lang === 'hi' ? 'समर्थित: JPG, JPEG, PNG (अधिकतम 10MB)' : 'Supports JPG, JPEG, PNG (max 10MB)'}
                   </p>
                 </div>
               )}
               <input
-                id="craft-image-input-ph8"
+                id="craft-image-input-ph9"
                 type="file"
                 accept=".jpg,.jpeg,.png"
                 onChange={handleFileChange}
                 style={{ display: 'none' }}
               />
             </div>
-
-            <button
-              type="button"
-              onClick={handleAnalyze}
-              className="btn-primary"
-              style={{ width: '100%', padding: '12px' }}
-              disabled={!selectedFile || analyzing}
-            >
-              {analyzing ? (
-                <>
-                  <div className="spinner"></div> {lang === 'hi' ? 'AI विश्लेषण चल रहा है...' : 'Running Vision AI Analysis...'}
-                </>
-              ) : (
-                <>
-                  <Sparkles size={18} /> {lang === 'hi' ? 'AI विजन विश्लेषण चलाएं' : 'Analyze Craft Image'}
-                </>
-              )}
-            </button>
           </div>
 
-          {/* Step 2: Review & Correct AI Analysis Panel */}
-          {aiAnalysis && (
-            <div style={{ padding: '16px', backgroundColor: '#faf7f3', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <CheckSquare size={18} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 2: AI गुणों की समीक्षा और सुधार करें' : 'Step 2: Review & Correct AI Attributes'}
-                </h4>
-                {attributesConfirmed && (
-                  <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '700' }}>
-                    ✓ Confirmed
-                  </span>
-                )}
+          {/* Step 2: Artisan Product & Production Inputs Form */}
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+            <h3 style={{ fontSize: '1.15rem', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              ✍️ {lang === 'hi' ? 'चरण 2: उत्पाद विवरण और निर्माण लागत दर्ज करें' : 'Step 2: Enter Product Details & Production Costs'}
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="form-group">
+                <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                  {lang === 'hi' ? 'उत्पाद का नाम (Product Name) *' : 'Product Name *'}
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Handmade Terracotta Pottery Vase"
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                  required
+                />
               </div>
 
-              {aiAnalysis.is_uncertain && (
-                <div style={{ padding: '10px 14px', background: '#fff7ed', borderLeft: '4px solid #ea580c', borderRadius: '4px', marginBottom: '14px', fontSize: '0.85rem', color: '#9a3412', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                  <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <div>
-                    <strong>{lang === 'hi' ? 'सत्यापन आवश्यक है:' : 'Verification Recommended:'}</strong> {lang === 'hi'
-                      ? 'हम इस उत्पाद की पहचान पूरे विश्वास के साथ नहीं कर सके। कृपया नीचे दिए गए गुणों की जांच करें या सही मान दर्ज करें।'
-                      : 'We couldn\'t confidently identify all attributes. Please review and enter the Product Type, Material, and Craft Type below.'}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <label style={{ fontSize: '0.82rem', fontWeight: '600' }}>{lang === 'hi' ? 'उत्पाद प्रकार (Product Type) *' : 'Product Type *'}</label>
-                    {getConfidenceBadge(aiAnalysis.product_type_meta || aiAnalysis.attributes?.product_type)}
-                  </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                    {lang === 'hi' ? 'सामग्री (Material) *' : 'Material *'}
+                  </label>
                   <input
                     type="text"
                     className="form-input"
-                    value={attrProductType}
-                    onChange={(e) => setAttrProductType(e.target.value)}
-                    placeholder="e.g. Carved Wooden Box, Terracotta Pot"
-                    style={{ fontSize: '0.9rem', padding: '8px 12px' }}
+                    placeholder="e.g. Terracotta Clay, Wood"
+                    value={material}
+                    onChange={(e) => setMaterial(e.target.value)}
+                    required
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label style={{ fontSize: '0.82rem', fontWeight: '600' }}>{lang === 'hi' ? 'सामग्री (Material) *' : 'Material *'}</label>
-                      {getConfidenceBadge(aiAnalysis.material_meta || aiAnalysis.attributes?.material)}
-                    </div>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={attrMaterial}
-                      onChange={(e) => setAttrMaterial(e.target.value)}
-                      placeholder="e.g. Clay, Wood, Brass"
-                      style={{ fontSize: '0.9rem', padding: '8px 12px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label style={{ fontSize: '0.82rem', fontWeight: '600' }}>{lang === 'hi' ? 'हस्तशिल्प (Craft) *' : 'Craft Type *'}</label>
-                      {getConfidenceBadge(aiAnalysis.craft_type_meta || aiAnalysis.attributes?.craft_type)}
-                    </div>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={attrCraftType}
-                      onChange={(e) => setAttrCraftType(e.target.value)}
-                      placeholder="e.g. Wood Carving, Pottery"
-                      style={{ fontSize: '0.9rem', padding: '8px 12px' }}
-                    />
-                  </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                    {lang === 'hi' ? 'हस्तशिल्प (Craft Type) *' : 'Craft Type *'}
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Pottery, Wood Carving"
+                    value={craftType}
+                    onChange={(e) => setCraftType(e.target.value)}
+                    required
+                  />
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label style={{ fontSize: '0.82rem', fontWeight: '600' }}>{lang === 'hi' ? 'रंग (Color)' : 'Primary Color'}</label>
-                      {getConfidenceBadge(aiAnalysis.primary_color_meta || aiAnalysis.attributes?.primary_color)}
-                    </div>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={attrPrimaryColor}
-                      onChange={(e) => setAttrPrimaryColor(e.target.value)}
-                      placeholder="e.g. Brown, Terracotta Red"
-                      style={{ fontSize: '0.9rem', padding: '8px 12px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <label style={{ fontSize: '0.82rem', fontWeight: '600' }}>{lang === 'hi' ? 'शैली (Style)' : 'Style'}</label>
-                      {getConfidenceBadge(aiAnalysis.style_meta || aiAnalysis.attributes?.style)}
-                    </div>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={attrStyle}
-                      onChange={(e) => setAttrStyle(e.target.value)}
-                      placeholder="e.g. Traditional Handcrafted"
-                      style={{ fontSize: '0.9rem', padding: '8px 12px' }}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleConfirmAttributes}
-                  className="btn-primary"
-                  style={{ width: '100%', marginTop: '8px', padding: '10px', fontSize: '0.92rem' }}
-                  disabled={generatingCatalog}
-                >
-                  {generatingCatalog ? (
-                    <>
-                      <div className="spinner"></div> {lang === 'hi' ? 'कैटलॉग तैयार हो रहा है...' : 'Generating Catalog...'}
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle size={16} /> {lang === 'hi' ? 'गुणों की पुष्टि करें और कैटलॉग बनाएं' : 'Confirm Attributes & Generate Catalog'}
-                    </>
-                  )}
-                </button>
               </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                    {lang === 'hi' ? 'उत्पाद का आकार (Size)' : 'Product Size'}
+                  </label>
+                  <select
+                    className="form-select"
+                    value={productSize}
+                    onChange={(e) => setProductSize(e.target.value)}
+                  >
+                    <option value="small">{lang === 'hi' ? 'छोटा (Small)' : 'Small'}</option>
+                    <option value="medium">{lang === 'hi' ? 'मध्यम (Medium)' : 'Medium'}</option>
+                    <option value="large">{lang === 'hi' ? 'बड़ा (Large)' : 'Large'}</option>
+                    <option value="extra_large">{lang === 'hi' ? 'अति विशाल (Extra Large)' : 'Extra Large'}</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                    {lang === 'hi' ? 'लाभ मार्जिन (%)' : 'Target Profit Margin (%)'}
+                  </label>
+                  <input
+                    type="number"
+                    className="form-input"
+                    value={profitMargin}
+                    onChange={(e) => setProfitMargin(e.target.value)}
+                    placeholder="25"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                  {lang === 'hi' ? 'संक्षिप्त विवरण (Short Description)' : 'Short / Basic Description'}
+                </label>
+                <textarea
+                  className="form-textarea"
+                  rows={2}
+                  placeholder="e.g. Hand-molded earthenware pot crafted using traditional wheel techniques and natural polish."
+                  value={basicDescription}
+                  onChange={(e) => setBasicDescription(e.target.value)}
+                />
+              </div>
+
+              {/* Labor & Material Costs Box */}
+              <div style={{ background: '#faf7f3', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <h4 style={{ fontSize: '0.88rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <DollarSign size={16} color="var(--primary-color)" /> {lang === 'hi' ? 'लागत विवरण' : 'Cost & Labor Inputs'}
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '0.8rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.78rem' }}>Material Cost (₹)</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={materialCost}
+                      onChange={(e) => setMaterialCost(e.target.value)}
+                      style={{ padding: '6px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.78rem' }}>Making Time (Hrs)</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={makingHours}
+                      onChange={(e) => setMakingHours(e.target.value)}
+                      style={{ padding: '6px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.78rem' }}>Hourly Rate (₹)</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={hourlyRate}
+                      onChange={(e) => setHourlyRate(e.target.value)}
+                      style={{ padding: '6px' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGenerateCatalogAndPrice}
+                className="btn-primary"
+                style={{ width: '100%', padding: '12px', marginTop: '8px', fontSize: '0.95rem' }}
+                disabled={generatingCatalog || !productName || !material || !craftType}
+              >
+                {generatingCatalog ? (
+                  <>
+                    <div className="spinner"></div> {lang === 'hi' ? 'AI कैटलॉग तैयार हो रहा है...' : 'Generating Professional AI Catalog & Price...'}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={18} /> {lang === 'hi' ? 'AI पेशेवर कैटलॉग और मूल्य तैयार करें' : 'Generate Professional AI Catalog & Price'}
+                  </>
+                )}
+              </button>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Right Column: AI Generated Listing Preview & Multilingual Editor */}
-        <div className="card" style={{ opacity: attributesConfirmed ? 1 : 0.6, pointerEvents: attributesConfirmed ? 'auto' : 'none', transition: 'all 0.3s ease' }}>
+        <div className="card" style={{ opacity: catalogGenerated ? 1 : 0.65, pointerEvents: catalogGenerated ? 'auto' : 'none', transition: 'all 0.3s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={20} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 3: कैटलॉग संपादक' : 'Step 3: Multilingual Catalog Editor'}
+              <Sparkles size={20} color="var(--primary-color)" /> {lang === 'hi' ? 'चरण 3: AI कैटलॉग और मूल्य संपादक' : 'Step 3: Professional Catalog & Price Editor'}
             </h3>
 
-            {/* Language Switch Tabs & Instant Translator */}
+            {/* Language Switch Tabs */}
             <div style={{ display: 'flex', gap: '6px' }}>
               <button
                 type="button"
@@ -580,9 +501,9 @@ export const AddProduct = ({ lang = 'en' }) => {
             </div>
           </div>
 
-          {!attributesConfirmed && (
+          {!catalogGenerated && (
             <div style={{ padding: '10px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', borderRadius: '6px', marginBottom: '16px', fontSize: '0.85rem' }}>
-              ℹ️ {lang === 'hi' ? 'कृपया पहले बाईं ओर गुणों की पुष्टि करें।' : 'Please review and confirm AI attributes on the left to unlock catalog generation.'}
+              ℹ️ {lang === 'hi' ? 'कृपया पहले बाईं ओर उत्पाद विवरण भरें और AI कैटलॉग बटन पर क्लिक करें।' : 'Please enter product details on the left and click Generate AI Catalog & Price.'}
             </div>
           )}
 
@@ -597,7 +518,7 @@ export const AddProduct = ({ lang = 'en' }) => {
                 onClick={() => handleTranslateContent('hi')}
                 className="btn-outline"
                 style={{ padding: '4px 10px', fontSize: '0.78rem' }}
-                disabled={translating || !attributesConfirmed}
+                disabled={translating || !catalogGenerated}
               >
                 {translating ? 'अनुवाद हो रहा है...' : 'Translate to Hindi (हिंदी)'}
               </button>
@@ -606,7 +527,7 @@ export const AddProduct = ({ lang = 'en' }) => {
                 onClick={() => handleTranslateContent('en')}
                 className="btn-outline"
                 style={{ padding: '4px 10px', fontSize: '0.78rem' }}
-                disabled={translating || !attributesConfirmed}
+                disabled={translating || !catalogGenerated}
               >
                 {translating ? 'Translating...' : 'Translate to English'}
               </button>
@@ -668,11 +589,11 @@ export const AddProduct = ({ lang = 'en' }) => {
               /* English Input Fields */
               <>
                 <div className="form-group">
-                  <label>Product Title (English) *</label>
+                  <label>Professional Title (English) *</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="AI will populate title..."
+                    placeholder="AI will generate title..."
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required={activeTabLang === 'en'}
@@ -680,7 +601,7 @@ export const AddProduct = ({ lang = 'en' }) => {
                 </div>
 
                 <div className="form-group">
-                  <label>Description (English)</label>
+                  <label>Marketplace Description (English)</label>
                   <textarea
                     className="form-textarea"
                     rows={3}
@@ -692,18 +613,18 @@ export const AddProduct = ({ lang = 'en' }) => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="form-group">
-                    <label>Category (English)</label>
+                    <label>Category Path</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="e.g. Home Decor"
+                      placeholder="e.g. Home & Living > Pottery"
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label>Tags (English, comma-separated)</label>
+                    <label>Tags (Comma-separated)</label>
                     <input
                       type="text"
                       className="form-input"
@@ -716,138 +637,67 @@ export const AddProduct = ({ lang = 'en' }) => {
               </>
             )}
 
-            {/* Shared Fields */}
+            {/* Calculated Price Tiers Box */}
+            {priceTiers && (
+              <div style={{ marginTop: '14px', background: '#faf7f3', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '14px' }}>
+                <h4 style={{ fontSize: '0.85rem', marginBottom: '8px', color: 'var(--text-muted)' }}>
+                  📊 Price Recommendation Tiers (INR ₹):
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '0.82rem' }}>
+                  <div style={{ background: '#fff', padding: '6px', borderRadius: '4px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>Cost</span>
+                    <strong>₹{priceTiers.production_cost}</strong>
+                  </div>
+                  <div style={{ background: '#fff', padding: '6px', borderRadius: '4px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>Minimum</span>
+                    <strong>₹{priceTiers.minimum_price}</strong>
+                  </div>
+                  <div style={{ background: '#dcfce7', padding: '6px', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#15803d', display: 'block', fontWeight: '700' }}>Recommended</span>
+                    <strong style={{ color: '#15803d' }}>₹{priceTiers.recommended_price}</strong>
+                  </div>
+                  <div style={{ background: '#fff', padding: '6px', borderRadius: '4px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>Maximum</span>
+                    <strong>₹{priceTiers.maximum_price}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group">
-                <label>{lang === 'hi' ? 'सामग्री (Material)' : 'Material'}</label>
+                <label>{lang === 'hi' ? 'अंतिम बिक्री मूल्य (INR ₹)' : 'Final Selling Price (INR ₹)'}</label>
                 <input
-                  type="text"
+                  type="number"
                   className="form-input"
-                  placeholder="e.g. Clay, Wood"
-                  value={material}
-                  onChange={(e) => setMaterial(e.target.value)}
+                  placeholder="e.g. 1050"
+                  value={suggestedPrice}
+                  onChange={(e) => setSuggestedPrice(e.target.value)}
                 />
               </div>
 
               <div className="form-group">
-                <label>{lang === 'hi' ? 'हस्तशिल्प प्रकार (Craft)' : 'Craft Type'}</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Pottery"
-                  value={craftType}
-                  onChange={(e) => setCraftType(e.target.value)}
-                />
+                <label>{lang === 'hi' ? 'उत्पाद की स्थिति (Status)' : 'Status'}</label>
+                <select
+                  className="form-select"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  <option value="published">{lang === 'hi' ? 'प्रकाशित (Published)' : 'Published'}</option>
+                  <option value="draft">{lang === 'hi' ? 'ड्राफ्ट (Draft)' : 'Draft'}</option>
+                </select>
               </div>
-            </div>
-
-            <div className="form-group">
-              <label>{lang === 'hi' ? 'उत्पाद की स्थिति (Status)' : 'Status'}</label>
-              <select
-                className="form-select"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="published">{lang === 'hi' ? 'प्रकाशित (Published)' : 'Published'}</option>
-                <option value="draft">{lang === 'hi' ? 'ड्राफ्ट (Draft)' : 'Draft'}</option>
-              </select>
-            </div>
-
-            {/* Price Recommendation Section */}
-            <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#faf7f3', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
-              <h4 style={{ fontSize: '0.95rem', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <DollarSign size={16} color="var(--primary-color)" /> {lang === 'hi' ? 'मूल्य कैलकुलेटर' : 'Price Recommendation Calculator'}
-              </h4>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem' }}>{lang === 'hi' ? 'सामग्री लागत (₹)' : 'Material Cost (₹)'}</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={materialCost}
-                    onChange={(e) => setMaterialCost(e.target.value)}
-                    style={{ padding: '6px 10px' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.8rem' }}>{lang === 'hi' ? 'बनाने का समय (घंटे)' : 'Making Time (Hours)'}</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={makingHours}
-                    onChange={(e) => setMakingHours(e.target.value)}
-                    style={{ padding: '6px 10px' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.8rem' }}>{lang === 'hi' ? 'प्रति घंटा दर (₹)' : 'Hourly Rate (₹)'}</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={hourlyRate}
-                    onChange={(e) => setHourlyRate(e.target.value)}
-                    style={{ padding: '6px 10px' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.8rem' }}>{lang === 'hi' ? 'उत्पाद का आकार' : 'Product Size'}</label>
-                  <select
-                    className="form-select"
-                    value={productSize}
-                    onChange={(e) => setProductSize(e.target.value)}
-                    style={{ padding: '6px 10px' }}
-                  >
-                    <option value="small">{lang === 'hi' ? 'छोटा (Small)' : 'Small'}</option>
-                    <option value="medium">{lang === 'hi' ? 'मध्यम (Medium)' : 'Medium'}</option>
-                    <option value="large">{lang === 'hi' ? 'बड़ा (Large)' : 'Large'}</option>
-                    <option value="extra_large">{lang === 'hi' ? 'अति विशाल (Extra Large)' : 'Extra Large'}</option>
-                  </select>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCalculatePrice}
-                className="btn-secondary"
-                style={{ width: '100%', marginTop: '12px', padding: '8px', fontSize: '0.85rem' }}
-                disabled={calculatingPrice}
-              >
-                {calculatingPrice ? (lang === 'hi' ? 'गणना हो रही है...' : 'Calculating...') : (lang === 'hi' ? 'अनुशंसित मूल्य की गणना करें' : 'Calculate Price Recommendation')}
-              </button>
-
-              {priceTiers && (
-                <div style={{ marginTop: '12px', background: '#fff', padding: '10px', borderRadius: '6px', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Min: <strong>₹{priceTiers.minimum_price}</strong></span>
-                  <span style={{ color: 'var(--primary-color)' }}>Rec: <strong>₹{priceTiers.recommended_price}</strong></span>
-                  <span>Max: <strong>₹{priceTiers.maximum_price}</strong></span>
-                </div>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label>{lang === 'hi' ? 'अंतिम मूल्य (INR ₹)' : 'Final Price (INR ₹)'}</label>
-              <input
-                type="number"
-                className="form-input"
-                placeholder="e.g. 1050"
-                value={suggestedPrice}
-                onChange={(e) => setSuggestedPrice(e.target.value)}
-              />
             </div>
 
             <button
               type="submit"
               className="btn-primary"
-              style={{ width: '100%', padding: '12px' }}
-              disabled={saving || !attributesConfirmed}
+              style={{ width: '100%', padding: '12px', marginTop: '10px' }}
+              disabled={saving || !catalogGenerated}
             >
               {saving ? (
                 <>
-                  <div className="spinner"></div> {lang === 'hi' ? 'सहेजा जा रहा है...' : 'Saving to Catalog...'}
+                  <div className="spinner"></div> {lang === 'hi' ? 'सहेजा जा रहा है...' : 'Saving Product to Catalog...'}
                 </>
               ) : (
                 <>
@@ -861,4 +711,3 @@ export const AddProduct = ({ lang = 'en' }) => {
     </div>
   );
 };
-

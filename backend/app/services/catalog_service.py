@@ -36,20 +36,29 @@ class CatalogService:
             return default
         return str(item).strip()
 
-    async def generate_catalog(self, vision_analysis: Dict[str, Any]) -> Dict[str, Any]:
+    async def generate_catalog(self, artisan_inputs: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Generates a marketplace-ready product catalog based on Vision AI analysis / confirmed attributes.
+        Generates a marketplace-ready product catalog based on artisan-provided facts.
         Uses Gemini/OpenAI API if keys are set, otherwise uses deterministic fallback.
         """
         gemini_key = settings.GEMINI_API_KEY
         openai_key = settings.OPENAI_API_KEY
 
+        p_name = self._get_val(artisan_inputs.get("product_name") or artisan_inputs.get("product_type"), "Handcrafted Artisan Product")
+        mat = self._get_val(artisan_inputs.get("material"), "Quality Material")
+        craft = self._get_val(artisan_inputs.get("craft_type"), "Handicraft")
+        size = self._get_val(artisan_inputs.get("product_size"), "Medium")
+        basic_desc = self._get_val(artisan_inputs.get("basic_description") or artisan_inputs.get("description"), "")
+
         clean_analysis = {
-            "product_type": self._get_val(vision_analysis.get("product_type"), "Craft Product"),
-            "material": self._get_val(vision_analysis.get("material"), "Handcrafted Material"),
-            "primary_color": self._get_val(vision_analysis.get("primary_color"), "Natural"),
-            "craft_type": self._get_val(vision_analysis.get("craft_type"), "Handcraft"),
-            "style": self._get_val(vision_analysis.get("style"), "Traditional Handcrafted"),
+            "product_name": p_name,
+            "product_type": p_name,
+            "material": mat,
+            "craft_type": craft,
+            "product_size": size,
+            "basic_description": basic_desc,
+            "primary_color": self._get_val(artisan_inputs.get("primary_color"), "Natural"),
+            "style": self._get_val(artisan_inputs.get("style"), "Traditional Handcrafted"),
         }
 
         if gemini_key and gemini_key != "your_gemini_api_key_here":
@@ -57,7 +66,7 @@ class CatalogService:
         elif openai_key and openai_key != "your_openai_api_key_here":
             return await self._generate_with_openai(clean_analysis, openai_key)
         else:
-            logger.info("No active Vision/LLM API key found in .env. Using offline catalog generator.")
+            logger.info("No active LLM API key found in .env. Using offline catalog generator.")
             return self._offline_fallback_catalog(clean_analysis)
 
     async def _generate_with_gemini(self, vision_analysis: Dict[str, Any], api_key: str) -> Dict[str, Any]:
