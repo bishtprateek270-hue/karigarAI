@@ -11,6 +11,7 @@ import { AddProduct } from './pages/AddProduct';
 import { MyProducts } from './pages/MyProducts';
 import { ProductDetails } from './pages/ProductDetails';
 import { EditProduct } from './pages/EditProduct';
+import { Profile } from './pages/Profile';
 
 const HomeRedirect = () => {
   const { user } = useAuth();
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard lang={currentLang} />} />
                 <Route path="/add-product" element={<AddProduct lang={currentLang} />} />
                 <Route path="/my-products" element={<MyProducts lang={currentLang} />} />
+                <Route path="/profile" element={<Profile lang={currentLang} />} />
                 <Route path="/products/:id" element={<ProductDetails lang={currentLang} />} />
                 <Route path="/edit-product/:id" element={<EditProduct lang={currentLang} />} />
               </Route>
