@@ -12,7 +12,7 @@ def create_test_image(color_rgb, width=200, height=200):
     return buf.getvalue()
 
 
-async def test_diversity():
+async def _run_diversity_checks():
     samples = [
         ("Terracotta Clay Pot", create_test_image((180, 80, 40), 200, 260), "pottery_craft.jpg"),
         ("Carved Wooden Box", create_test_image((110, 60, 25), 250, 180), "wooden_box.jpg"),
@@ -21,10 +21,6 @@ async def test_diversity():
         ("Woven Bamboo Basket", create_test_image((210, 190, 150), 300, 200), "bamboo_basket.jpg"),
         ("Unusual Obscure Craft", create_test_image((128, 128, 128), 200, 200), "obscure_item.jpg"),
     ]
-
-    print("\n=======================================================")
-    print("      KARIGAR AI VISION AI DIVERSITY TEST SUITE       ")
-    print("=======================================================\n")
 
     results = []
     for name, img_bytes, filename in samples:
@@ -36,26 +32,19 @@ async def test_diversity():
         craft = vision_res["craft_type"]
         title = catalog_res["title"]
 
-        print(f"[IMAGE]: {filename} ({name})")
-        print(f"   -> Detected Type:  {pt}")
-        print(f"   -> Detected Mat:   {mat}")
-        print(f"   -> Detected Craft: {craft}")
-        print(f"   -> Title:          {title}")
-        print(f"   -> Category:       {catalog_res['category']}\n")
-
         results.append((pt, mat, craft, title))
 
-    # Assert that results are not all identical!
     unique_types = set(r[0] for r in results)
     unique_titles = set(r[3] for r in results)
 
-    print(f"Unique Product Types Detected: {len(unique_types)} / {len(samples)}")
-    print(f"Unique Catalog Titles Generated: {len(unique_titles)} / {len(samples)}")
-
     assert len(unique_types) >= 4, "Vision AI failed diversity check! Too many duplicate product types."
     assert len(unique_titles) >= 4, "Catalog generator failed diversity check! Too many duplicate titles."
-    print("\n[SUCCESS] VISION AI DIVERSITY & INDEPENDENCE VERIFIED SUCCESSFULLY!\n")
+
+
+def test_vision_diversity_suite():
+    """Synchronous pytest wrapper for vision diversity checks."""
+    asyncio.run(_run_diversity_checks())
 
 
 if __name__ == "__main__":
-    asyncio.run(test_diversity())
+    test_vision_diversity_suite()
