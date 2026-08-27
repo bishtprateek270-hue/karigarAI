@@ -40,6 +40,16 @@ async function handleResponse(response) {
     } catch (e) {
       // JSON parse fallback
     }
+
+    if (response.status === 401) {
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        localStorage.removeItem('karigar_token');
+        localStorage.removeItem('karigar_user');
+        window.location.href = '/login';
+        throw new Error('Your session has expired. Please log in to save products.');
+      }
+    }
+
     throw new Error(errorDetail);
   }
   return response.json();
