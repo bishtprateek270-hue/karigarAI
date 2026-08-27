@@ -151,6 +151,22 @@ async def generate_catalog_root(confirmed_attributes: dict):
     return {"status": "success", "catalog": catalog}
 
 
+@app.post(
+    "/generate-story",
+    status_code=status.HTTP_200_OK,
+    tags=["Artisan Story Engine"],
+    summary="Generate Cultural Heritage Story & Artisan Bio Card",
+)
+async def generate_story_root(payload: dict):
+    from app.services.catalog_service import catalog_service
+    story = await catalog_service.generate_artisan_story(
+        product_name=payload.get("product_name", ""),
+        material=payload.get("material", ""),
+        craft_type=payload.get("craft_type", ""),
+    )
+    return {"status": "success", "story": story}
+
+
 
 @app.post(
     "/suggest-price",

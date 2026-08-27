@@ -259,13 +259,54 @@ class CatalogService:
             f"artisan {product_type.lower()}",
         ]
 
-        return {
-            "title": title,
-            "description": description,
-            "category": matched_cat,
-            "tags": tags,
-            "seo_keywords": seo_keywords,
-        }
+    async def generate_artisan_story(self, product_name: str, material: str, craft_type: str) -> Dict[str, str]:
+        """
+        Generates a 2-paragraph cultural heritage story and artisan bio card for a craft product.
+        """
+        p_name = product_name or "Handcrafted Craft"
+        mat = material or "Natural Materials"
+        craft = craft_type or "Traditional Handicraft"
+
+        prompt = (
+            f"You are a master storyteller for traditional Indian artisans at KarigarAI. "
+            f"Craft a heartwarming, grounded, 2-paragraph heritage bio story for a handcrafted product.\n"
+            f"Product: {p_name}\nMaterial: {mat}\nCraft Technique: {craft}\n\n"
+            f"Paragraph 1 (The Heritage & Craft): Describe the rich cultural roots, ancient tradition, and painstaking handcrafting technique of {craft} using {mat}.\n"
+            f"Paragraph 2 (The Artisan's Soul): Describe the artisan's dedication, passion, and how buying this handmade piece preserves traditional livelihoods.\n\n"
+            f"Return ONLY a JSON object with keys: 'story_en' (English story) and 'story_hi' (Hindi story in Devanagari script)."
+        )
+
+        gemini_key = settings.GEMINI_API_KEY
+        if gemini_key and gemini_key != "your_gemini_api_key_here":
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={gemini_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"response_mime_type": "application/json"},
+                }
+                async with httpx.AsyncClient(timeout=25.0) as client:
+                    res = await client.post(url, json=payload)
+                if res.status_code == 200:
+                    data = res.json()
+                    raw = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                    parsed = json.loads(raw.replace("```json", "").replace("```", "").strip())
+                    return {
+                        "story_en": parsed.get("story_en", ""),
+                        "story_hi": parsed.get("story_hi", ""),
+                    }
+            except Exception as e:
+                logger.warning(f"Gemini story generation failed: {e}")
+
+        # Deterministic Fallback Story Card
+        story_en = (
+            f"Rooted in centuries-old traditions, this exquisite {p_name.lower()} is handcrafted using traditional {craft.lower()} techniques and authentic {mat.lower()}.\n\n"
+            f"Every line, texture, and contour reflects hours of dedicated craftsmanship by master artisans. By welcoming this handmade piece into your home, you support traditional artisan livelihoods and preserve India's living cultural heritage."
+        )
+        story_hi = (
+            f"सदियों पुरानी परंपराओं में रची-बसी, यह उत्कृष्ट {p_name} पारंपरिक {craft} तकनीकों और प्रामाणिक {mat} का उपयोग करके हस्तनिर्मित की गई है।\n\n"
+            f"इसकी प्रत्येक पंक्ति और बनावट कुशल कारीगरों के घंटों के समर्पण को दर्शाती है। इस हस्तनिर्मित कृति को अपनाकर, आप पारंपरिक कारीगरों की आजीविका का समर्थन करते हैं और भारत की जीवंत सांस्कृतिक विरासत को सहेजते हैं।"
+        )
+        return {"story_en": story_en, "story_hi": story_hi}
 
 
 catalog_service = CatalogService()

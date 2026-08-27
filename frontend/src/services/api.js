@@ -100,6 +100,22 @@ export const api = {
     return handleResponse(res);
   },
 
+  async generateStory(productName, material, craftType) {
+    const res = await fetch(`${API_BASE_URL}/generate-story`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({
+        product_name: productName,
+        material: material,
+        craft_type: craftType,
+      }),
+    });
+    return handleResponse(res);
+  },
+
 
   async suggestPrice(pricingData) {
     const res = await fetch(`${API_BASE_URL}/suggest-price`, {

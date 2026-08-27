@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Package, ArrowLeft, Edit3, Trash2, Tag, Calendar } from 'lucide-react';
 import { ProductImage } from '../components/ProductImage';
+import { ArtisanStoryCard } from '../components/ArtisanStoryCard';
+import { QRCodePriceTag } from '../components/QRCodePriceTag';
 
 export const ProductDetails = ({ lang = 'en' }) => {
   const { id } = useParams();
@@ -136,6 +138,16 @@ export const ProductDetails = ({ lang = 'en' }) => {
           )}
         </div>
       </div>
+
+      {/* Artisan Heritage Story Component */}
+      <ArtisanStoryCard
+        productName={product.title}
+        material={product.material}
+        craftType={product.craft_type}
+      />
+
+      {/* Exhibition Printable QR Code Price Tag Component */}
+      <QRCodePriceTag product={product} />
     </div>
   );
 };
