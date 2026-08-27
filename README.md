@@ -2,7 +2,18 @@
 
 **KarigarAI** is an end-to-end AI-powered e-commerce marketplace platform designed to empower local artisans and craftspeople. It automates product feature recognition from craft photos, generates marketplace-ready titles and descriptions, recommends transparent pricing, and translates listings into local languages (English & Hindi).
 
+
 ---
+
+## 🌐 Live Production Deployment
+
+- 🎨 **Live Frontend Web Portal**: [https://karigar-ai-amber.vercel.app](https://karigar-ai-amber.vercel.app)
+- ⚡ **Live FastAPI Backend API**: [https://karigar-ai-8nik.vercel.app](https://karigar-ai-8nik.vercel.app)
+- 📄 **Interactive OpenAPI/Swagger Docs**: [https://karigar-ai-8nik.vercel.app/docs](https://karigar-ai-8nik.vercel.app/docs)
+- 💓 **Live Health Check Endpoint**: [https://karigar-ai-8nik.vercel.app/health](https://karigar-ai-8nik.vercel.app/health)
+
+---
+
 
 ## 🌟 Key Features
 
