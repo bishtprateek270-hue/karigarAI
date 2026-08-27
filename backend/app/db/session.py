@@ -49,6 +49,7 @@ def get_db():
 def init_db():
     """Initializes database tables and ensures schema migrations."""
     try:
+        import app.db.models  # noqa
         from sqlalchemy import text
         Base.metadata.create_all(bind=engine)
         with engine.connect() as conn:

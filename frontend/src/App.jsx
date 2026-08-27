@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { ForgotPassword } from './pages/ForgotPassword';
 import { Dashboard } from './pages/Dashboard';
 import { AddProduct } from './pages/AddProduct';
 import { MyProducts } from './pages/MyProducts';
@@ -32,6 +33,7 @@ function App() {
               <Route path="/" element={<HomeRedirect />} />
               <Route path="/login" element={<Login lang={currentLang} />} />
               <Route path="/register" element={<Register lang={currentLang} />} />
+              <Route path="/forgot-password" element={<ForgotPassword lang={currentLang} />} />
 
               {/* Protected Artisan Routes */}
               <Route element={<ProtectedRoute />}>

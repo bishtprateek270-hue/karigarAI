@@ -42,7 +42,17 @@ class Product(Base):
     tags_hi = Column(Text, nullable=True)
 
     suggested_price = Column(Float, nullable=True)
-    status = Column(String(50), default="active", nullable=False)
+    status = Column(String(20), default="published", nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     owner = relationship("User", back_populates="products")
+
+
+class PasswordResetOTP(Base):
+    __tablename__ = "password_reset_otps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), index=True, nullable=False)
+    otp = Column(String(6), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)

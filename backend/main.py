@@ -225,6 +225,9 @@ def register_root(req: UserRegisterRequest, db: Session = Depends(get_db)):
     return register_user(req, db)
 
 
+from app.api.v1.auth import register_user, login_user, request_password_reset_otp, reset_password_with_otp
+
+
 @app.post(
     "/login",
     response_model=TokenResponse,
@@ -233,6 +236,26 @@ def register_root(req: UserRegisterRequest, db: Session = Depends(get_db)):
 )
 def login_root(req: UserLoginRequest, db: Session = Depends(get_db)):
     return login_user(req, db)
+
+
+@app.post(
+    "/forgot-password/request-otp",
+    status_code=status.HTTP_200_OK,
+    tags=["Authentication"],
+    summary="Request Password Reset OTP",
+)
+def request_otp_root(payload: dict, db: Session = Depends(get_db)):
+    return request_password_reset_otp(payload, db)
+
+
+@app.post(
+    "/forgot-password/reset-password",
+    status_code=status.HTTP_200_OK,
+    tags=["Authentication"],
+    summary="Reset Password with OTP",
+)
+def reset_password_root(payload: dict, db: Session = Depends(get_db)):
+    return reset_password_with_otp(payload, db)
 
 
 @app.get(

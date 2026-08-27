@@ -95,6 +95,24 @@ export const api = {
     return handleResponse(res);
   },
 
+  async requestPasswordResetOtp(email) {
+    const res = await fetch(`${API_BASE_URL}/forgot-password/request-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    return handleResponse(res);
+  },
+
+  async resetPasswordWithOtp(email, otp, new_password) {
+    const res = await fetch(`${API_BASE_URL}/forgot-password/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp, new_password }),
+    });
+    return handleResponse(res);
+  },
+
   // AI & Pricing API
   async analyzeProduct(imageFile) {
     const formData = new FormData();

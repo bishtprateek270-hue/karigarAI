@@ -205,6 +205,39 @@ def test_vision_reliability_and_catalog_generation():
     print_status("Artisan-confirmed attributes correctly generated clean catalog entry")
 
 
+def test_forgot_password_otp_flow():
+    # 1. Register test artisan user
+    test_email = f"otp_user_{int(time.time())}@example.com"
+    res_reg = client.post("/register", json={"name": "OTP Artisan", "email": test_email, "password": "oldpassword123"})
+    assert res_reg.status_code == 201
+
+    # 2. Request OTP
+    res_otp = client.post("/forgot-password/request-otp", json={"email": test_email})
+    assert res_otp.status_code == 200
+    otp_code = res_otp.json()["otp"]
+    assert len(otp_code) == 6
+    print_status("Requested password reset OTP successfully")
+
+    # 3. Reset password with valid OTP
+    res_reset = client.post("/forgot-password/reset-password", json={
+        "email": test_email,
+        "otp": otp_code,
+        "new_password": "newpassword456"
+    })
+    assert res_reset.status_code == 200
+    print_status("Reset password with valid 6-digit OTP code successfully")
+
+    # 4. Old password login attempt (Should fail with 401)
+    res_old_login = client.post("/login", json={"email": test_email, "password": "oldpassword123"})
+    assert res_old_login.status_code == 401
+    print_status("Old password login correctly rejected with 401 Unauthorized")
+
+    # 5. New password login attempt (Should succeed with 200)
+    res_new_login = client.post("/login", json={"email": test_email, "password": "newpassword456"})
+    assert res_new_login.status_code == 200
+    print_status("New password login verified successfully with 200 OK")
+
+
 if __name__ == "__main__":
     print("\n=======================================================")
     print("      KARIGAR AI PHASE 9 FULL AUTOMATED TEST SUITE     ")
@@ -215,6 +248,7 @@ if __name__ == "__main__":
     test_pricing_engine()
     test_multilingual_translation()
     test_vision_reliability_and_catalog_generation()
+    test_forgot_password_otp_flow()
     print("\n=======================================================")
     print("   ALL TESTS EXECUTED AND VERIFIED SUCCESSFULLY (100%)  ")
     print("=======================================================\n")
