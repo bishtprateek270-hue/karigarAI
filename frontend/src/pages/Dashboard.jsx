@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { PlusCircle, Package, Sparkles, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
+import { PlusCircle, Package, Sparkles, CheckCircle2, Clock, ArrowRight, ShoppingBag } from 'lucide-react';
 import { ProductImage } from '../components/ProductImage';
 
 export const Dashboard = ({ lang = 'en' }) => {
@@ -49,16 +49,22 @@ export const Dashboard = ({ lang = 'en' }) => {
             <h1 style={{ fontSize: '2.2rem', marginTop: '8px', color: '#fff' }}>
               {lang === 'hi' ? `नमस्ते, ${user?.name || ''}! 🙏` : `Namaste, ${user?.name || ''}! 🙏`}
             </h1>
-            <p style={{ opacity: 0.9, marginTop: '4px', maxWidth: '600px' }}>
+            <p style={{ opacity: 0.9, maxWidth: '600px', margin: '6px 0 0 0', fontSize: '1rem' }}>
               {lang === 'hi'
-                ? 'कारीगर-एआई डैशबोर्ड में आपका स्वागत है। अपनी हस्तशिल्प फोटो अपलोड करें, एआई विश्लेषण चलाएं, और मूल्य सिफारिशें प्राप्त करें।'
-                : 'Welcome to your KarigarAI Dashboard. Upload your craft photos to automatically analyze features, generate marketplace listings, and calculate price recommendations.'}
+                ? 'अपने प्रामाणिक हस्तशिल्प उत्पादों को डिजिटाइज़ करें, एआई सहायता प्राप्त विवरण बनाएं और व्हाट्सएप पर ऑर्डर प्राप्त करें।'
+                : 'Digitize your handcrafted products with AI catalog generation, fair pricing, and direct WhatsApp ordering.'}
             </p>
           </div>
-          <Link to="/add-product" className="btn-primary" style={{ background: '#fff', color: 'var(--primary-color)', padding: '12px 24px', fontSize: '1rem' }}>
-            <PlusCircle size={20} />
-            <span>{lang === 'hi' ? 'नया उत्पाद जोड़ें' : 'Add New Product'}</span>
-          </Link>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <Link to="/marketplace" className="btn-secondary" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', padding: '12px 20px' }}>
+              <ShoppingBag size={18} />
+              <span>{lang === 'hi' ? 'बाज़ार देखें' : 'Explore Marketplace'}</span>
+            </Link>
+            <Link to="/add-product" className="btn-secondary" style={{ background: '#fff', color: 'var(--primary-color)', padding: '12px 20px' }}>
+              <PlusCircle size={18} />
+              <span>{lang === 'hi' ? 'नया उत्पाद जोड़ें' : 'Add New Product'}</span>
+            </Link>
+          </div>
         </div>
       </div>
 

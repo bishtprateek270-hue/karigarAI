@@ -113,6 +113,23 @@ def list_user_products(
 
 
 @router.get(
+    "/public/products",
+    response_model=List[ProductDBResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List all public marketplace products",
+    description="Returns all published artisan products across all sellers for public marketplace discovery.",
+)
+def list_public_products(db: Session = Depends(get_db)):
+    products = (
+        db.query(Product)
+        .filter(Product.status.in_(["active", "published"]))
+        .order_by(Product.created_at.desc())
+        .all()
+    )
+    return [_to_product_response(p) for p in products]
+
+
+@router.get(
     "/products/{product_id}",
     response_model=ProductDBResponse,
     status_code=status.HTTP_200_OK,

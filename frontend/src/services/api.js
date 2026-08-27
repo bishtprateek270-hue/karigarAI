@@ -113,6 +113,13 @@ export const api = {
     return handleResponse(res);
   },
 
+  async getPublicProducts() {
+    const res = await fetch(`${API_BASE_URL}/public/products`, {
+      method: 'GET',
+    });
+    return handleResponse(res);
+  },
+
   // AI & Pricing API
   async analyzeProduct(imageFile) {
     const formData = new FormData();

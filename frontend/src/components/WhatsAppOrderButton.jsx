@@ -4,9 +4,10 @@ import { MessageCircle, Share2, Phone, CheckCircle2 } from 'lucide-react';
 export const WhatsAppOrderButton = ({ product }) => {
   if (!product) return null;
 
-  // Use artisan's saved phone from database profile (product.owner_phone) or fallback
-  const rawPhone = product.owner_phone || localStorage.getItem('karigar_whatsapp_phone') || '919876543210';
-  const cleanPhone = rawPhone.replace(/\D/g, '');
+  // Use artisan's saved phone from database profile (product.owner_phone)
+  const rawPhone = product.owner_phone || '';
+  const cleanPhone = rawPhone ? rawPhone.replace(/\D/g, '') : '';
+  const hasPhone = Boolean(cleanPhone);
 
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
   const formattedPrice = product.suggested_price
@@ -30,7 +31,7 @@ Is this product available for order?`;
 💰 Price: ${formattedPrice}
 🔗 View Listing: ${currentUrl}`;
 
-  const whatsappOrderUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(orderMessage)}`;
+  const whatsappOrderUrl = hasPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(orderMessage)}` : null;
   const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
 
   return (
@@ -46,36 +47,63 @@ Is this product available for order?`;
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#dcfce7', color: '#14532d', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600' }}>
-          <CheckCircle2 size={16} color="#16a34a" />
-          <span>Verified Artisan WhatsApp: <strong>+{cleanPhone}</strong></span>
-        </div>
+        {hasPhone ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#dcfce7', color: '#14532d', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600' }}>
+            <CheckCircle2 size={16} color="#16a34a" />
+            <span>Verified Artisan WhatsApp: <strong>+{cleanPhone}</strong></span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fef3c7', color: '#92400e', padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600' }}>
+            <span>Artisan Phone Pending (Set in Profile)</span>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-        <a
-          href={whatsappOrderUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            flex: '1 1 240px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            background: '#25D366',
-            color: '#ffffff',
-            fontWeight: '700',
-            fontSize: '0.95rem',
-            padding: '12px 24px',
-            borderRadius: '12px',
-            textDecoration: 'none',
-            boxShadow: '0 2px 6px rgba(37,211,102,0.3)',
-          }}
-        >
-          <MessageCircle size={20} />
-          <span>Order Directly via WhatsApp</span>
-        </a>
+        {hasPhone ? (
+          <a
+            href={whatsappOrderUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              flex: '1 1 240px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              background: '#25D366',
+              color: '#ffffff',
+              fontWeight: '700',
+              fontSize: '0.95rem',
+              padding: '12px 24px',
+              borderRadius: '12px',
+              textDecoration: 'none',
+              boxShadow: '0 2px 6px rgba(37,211,102,0.3)',
+            }}
+          >
+            <MessageCircle size={20} />
+            <span>Order Directly via WhatsApp</span>
+          </a>
+        ) : (
+          <div
+            style={{
+              flex: '1 1 240px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              background: '#e5e7eb',
+              color: '#6b7280',
+              fontWeight: '600',
+              fontSize: '0.9rem',
+              padding: '12px 24px',
+              borderRadius: '12px',
+            }}
+          >
+            <MessageCircle size={20} />
+            <span>Artisan Phone Not Set Yet</span>
+          </div>
+        )}
 
         <a
           href={whatsappShareUrl}

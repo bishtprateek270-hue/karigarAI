@@ -6,6 +6,7 @@ import { UserPlus, Sparkles, Eye, EyeOff } from 'lucide-react';
 export const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +21,14 @@ export const Register = () => {
     setLoading(true);
 
     try {
-      await register(name, email, password);
+      const res = await register(name, email, password);
+      if (phone.trim()) {
+        const cleanedPhone = phone.replace(/\D/g, '');
+        const fullPhone = cleanedPhone ? (cleanedPhone.length === 10 ? `91${cleanedPhone}` : cleanedPhone) : '';
+        if (fullPhone) {
+          await api.updateProfile({ phone: fullPhone });
+        }
+      }
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
@@ -65,6 +73,26 @@ export const Register = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
+          </div>
+
+          <div className="form-group">
+            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>WhatsApp Mobile Number</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>(Optional)</span>
+            </label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ padding: '10px 14px', background: '#f3f4f6', border: '1px solid var(--border-color)', borderRadius: '10px', fontSize: '0.95rem', fontWeight: '600', color: '#4b5563' }}>
+                +91
+              </div>
+              <input
+                type="tel"
+                className="form-input"
+                placeholder="10-digit mobile number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                maxLength={10}
+              />
+            </div>
           </div>
 
           <div className="form-group">

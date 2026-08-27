@@ -13,10 +13,11 @@ import { MyProducts } from './pages/MyProducts';
 import { ProductDetails } from './pages/ProductDetails';
 import { EditProduct } from './pages/EditProduct';
 import { Profile } from './pages/Profile';
+import { Marketplace } from './pages/Marketplace';
 
 const HomeRedirect = () => {
   const { user } = useAuth();
-  return user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
+  return user ? <Navigate to="/dashboard" replace /> : <Navigate to="/marketplace" replace />;
 };
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<HomeRedirect />} />
+              <Route path="/marketplace" element={<Marketplace lang={currentLang} />} />
               <Route path="/login" element={<Login lang={currentLang} />} />
               <Route path="/register" element={<Register lang={currentLang} />} />
               <Route path="/forgot-password" element={<ForgotPassword lang={currentLang} />} />

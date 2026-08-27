@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles, Package, PlusCircle, LayoutDashboard, LogOut, User as UserIcon, Globe } from 'lucide-react';
+import { Sparkles, Package, PlusCircle, LayoutDashboard, LogOut, User as UserIcon, Globe, ShoppingBag } from 'lucide-react';
 
 export const Navbar = ({ currentLang = 'en', onLangChange }) => {
   const { user, logout } = useAuth();
@@ -24,6 +24,15 @@ export const Navbar = ({ currentLang = 'en', onLangChange }) => {
         </Link>
 
         <div className="nav-links">
+          {/* Public Marketplace Link */}
+          <Link
+            to="/marketplace"
+            className={`nav-item ${isActive('/marketplace') ? 'active' : ''}`}
+          >
+            <ShoppingBag size={18} />
+            <span>{currentLang === 'hi' ? 'बाज़ार' : 'Marketplace'}</span>
+          </Link>
+
           {/* Language Selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#faf7f3', padding: '4px 10px', borderRadius: '20px', border: '1px solid var(--border-color)' }}>
             <Globe size={16} color="var(--primary-color)" />

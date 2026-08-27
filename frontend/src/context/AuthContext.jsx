@@ -56,6 +56,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('karigar_token');
     localStorage.removeItem('karigar_user');
+    localStorage.removeItem('karigar_whatsapp_phone');
     setToken(null);
     setUser(null);
   };

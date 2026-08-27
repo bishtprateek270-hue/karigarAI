@@ -316,6 +316,27 @@ def create_product_root(
     return create_product(req, current_user, db)
 
 
+from app.api.v1.products_crud import (
+    create_product,
+    list_user_products,
+    list_public_products,
+    get_user_product,
+    update_user_product,
+    delete_user_product,
+)
+
+
+@app.get(
+    "/public/products",
+    response_model=List[ProductDBResponse],
+    status_code=status.HTTP_200_OK,
+    tags=["Product CRUD"],
+    summary="List all public marketplace products for buyers",
+)
+def list_public_products_root(db: Session = Depends(get_db)):
+    return list_public_products(db)
+
+
 @app.get(
     "/products",
     response_model=List[ProductDBResponse],

@@ -22,7 +22,7 @@ export const Profile = ({ lang = 'en' }) => {
         setName(profile.name || '');
         setEmail(profile.email || '');
         
-        let rawPhone = profile.phone || localStorage.getItem('karigar_whatsapp_phone') || '';
+        let rawPhone = profile.phone || '';
         if (rawPhone.startsWith('91') && rawPhone.length === 12) {
           rawPhone = rawPhone.substring(2);
         }
@@ -52,10 +52,6 @@ export const Profile = ({ lang = 'en' }) => {
         phone: fullPhone,
         bio: bio.trim(),
       });
-
-      if (fullPhone) {
-        localStorage.setItem('karigar_whatsapp_phone', fullPhone);
-      }
 
       setSuccessMsg(lang === 'hi' ? 'आपकी प्रोफ़ाइल जानकारी सफलतापूर्वक सहेजी गई!' : 'Profile details saved successfully!');
     } catch (err) {
