@@ -259,6 +259,14 @@ class CatalogService:
             f"artisan {product_type.lower()}",
         ]
 
+        return {
+            "title": title,
+            "description": description,
+            "category": matched_cat,
+            "tags": tags,
+            "seo_keywords": seo_keywords,
+        }
+
     async def generate_artisan_story(self, product_name: str, material: str, craft_type: str) -> Dict[str, str]:
         """
         Generates a 2-paragraph cultural heritage story and artisan bio card for a craft product.
