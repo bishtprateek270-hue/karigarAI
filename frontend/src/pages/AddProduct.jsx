@@ -77,6 +77,10 @@ export const AddProduct = ({ lang = 'en' }) => {
     try {
       const res = await api.analyzeProduct(selectedFile);
       setAiAnalysis(res.analysis);
+      if (res.image_url) {
+        setPreviewUrl(res.image_url);
+      }
+
 
       if (res.catalog) {
         setTitle(res.catalog.title || '');
