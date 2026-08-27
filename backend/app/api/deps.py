@@ -15,11 +15,19 @@ def get_current_user(
     """
     Extracts Bearer token from request header, verifies JWT payload, and fetches active User.
     """
+    cors_headers = {
+        "WWW-Authenticate": "Bearer",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+
     if not credentials or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication token is missing.",
-            headers={"WWW-Authenticate": "Bearer"},
+            headers=cors_headers,
         )
 
     token = credentials.credentials
@@ -29,7 +37,7 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired authentication token.",
-            headers={"WWW-Authenticate": "Bearer"},
+            headers=cors_headers,
         )
 
     try:
@@ -38,7 +46,7 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload.",
-            headers={"WWW-Authenticate": "Bearer"},
+            headers=cors_headers,
         )
 
     user = db.query(User).filter(User.id == user_id).first()
@@ -46,7 +54,7 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authenticated user no longer exists.",
-            headers={"WWW-Authenticate": "Bearer"},
+            headers=cors_headers,
         )
 
     return user
