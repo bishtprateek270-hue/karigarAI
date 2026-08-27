@@ -12,6 +12,53 @@ export const AddProduct = ({ lang = 'en' }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Step 2: AI Analysis & Error State
+  const [analyzing, setAnalyzing] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [error, setError] = useState('');
+
+  // Step 2.5: Review & Correct Attributes State
+  const [attrProductType, setAttrProductType] = useState('');
+  const [attrMaterial, setAttrMaterial] = useState('');
+  const [attrPrimaryColor, setAttrPrimaryColor] = useState('');
+  const [attrCraftType, setAttrCraftType] = useState('');
+  const [attrStyle, setAttrStyle] = useState('');
+  const [attributesConfirmed, setAttributesConfirmed] = useState(false);
+  const [generatingCatalog, setGeneratingCatalog] = useState(false);
+
+  // Step 3: Editable Catalog Form State (English & Hindi)
+  const [activeTabLang, setActiveTabLang] = useState(lang);
+  const [translating, setTranslating] = useState(false);
+
+  // English Catalog State
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
+  const [tags, setTags] = useState('');
+
+  // Hindi Catalog State
+  const [titleHi, setTitleHi] = useState('');
+  const [descriptionHi, setDescriptionHi] = useState('');
+  const [categoryHi, setCategoryHi] = useState('');
+  const [tagsHi, setTagsHi] = useState('');
+
+  // Shared Common Product Properties
+  const [material, setMaterial] = useState('');
+  const [craftType, setCraftType] = useState('');
+  const [status, setStatus] = useState('published');
+  const [suggestedPrice, setSuggestedPrice] = useState('');
+
+  // Step 4: Pricing Engine Calculation Form State
+  const [calculatingPrice, setCalculatingPrice] = useState(false);
+  const [materialCost, setMaterialCost] = useState(300);
+  const [makingHours, setMakingHours] = useState(5);
+  const [hourlyRate, setHourlyRate] = useState(100);
+  const [productSize, setProductSize] = useState('medium');
+  const [priceTiers, setPriceTiers] = useState(null);
+
+  // Saving State
+  const [saving, setSaving] = useState(false);
+
   // Handle File Drag and Drop Events
   const handleDragOver = (e) => {
     e.preventDefault();
