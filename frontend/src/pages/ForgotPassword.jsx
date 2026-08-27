@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { KeyRound, Mail, Lock, CheckCircle, ArrowLeft, Send, Sparkles } from 'lucide-react';
+import { KeyRound, Mail, Lock, CheckCircle, ArrowLeft, Send, Sparkles, Eye, EyeOff } from 'lucide-react';
 
 export const ForgotPassword = ({ lang = 'en' }) => {
   const navigate = useNavigate();
@@ -9,6 +9,7 @@ export const ForgotPassword = ({ lang = 'en' }) => {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -157,15 +158,37 @@ export const ForgotPassword = ({ lang = 'en' }) => {
               <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-color)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {lang === 'hi' ? 'नया पासवर्ड' : 'New Password'}
               </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.95rem', outline: 'none' }}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={{ width: '100%', padding: '12px 40px 12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.95rem', outline: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <button
