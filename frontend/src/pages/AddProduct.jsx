@@ -193,20 +193,20 @@ export const AddProduct = ({ lang = 'en' }) => {
       if (targetLang === 'hi') {
         payload = {
           title: title || titleHi,
-          description: description || basicDescription,
+          description: description || basicDescription || descriptionHi,
           category: category || categoryHi,
-          tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-          product_name: productName,
-          material: material,
-          craft_type: craftType,
+          tags: tags ? (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : tags) : (tagsHi ? (typeof tagsHi === 'string' ? tagsHi.split(',').map(t => t.trim()).filter(Boolean) : tagsHi) : []),
+          product_name: productName || productNameHi,
+          material: material || materialHi,
+          craft_type: craftType || craftTypeHi,
           target_language: 'hi',
         };
       } else {
         payload = {
           title: titleHi || title,
-          description: descriptionHi || description,
+          description: descriptionHi || description || basicDescription,
           category: categoryHi || category,
-          tags: tagsHi ? tagsHi.split(',').map(t => t.trim()).filter(Boolean) : [],
+          tags: tagsHi ? (typeof tagsHi === 'string' ? tagsHi.split(',').map(t => t.trim()).filter(Boolean) : tagsHi) : (tags ? (typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : tags) : []),
           product_name: productNameHi || productName,
           material: materialHi || material,
           craft_type: craftTypeHi || craftType,
@@ -217,22 +217,22 @@ export const AddProduct = ({ lang = 'en' }) => {
       const res = await api.translate(payload, targetLang);
 
       if (targetLang === 'hi') {
-        setTitleHi(res.title || '');
-        setDescriptionHi(res.description || '');
-        setCategoryHi(res.category || '');
-        setTagsHi(Array.isArray(res.tags) ? res.tags.join(', ') : res.tags || '');
-        setProductNameHi(res.product_name || '');
-        setMaterialHi(res.material || '');
-        setCraftTypeHi(res.craft_type || '');
+        if (res.title) setTitleHi(res.title);
+        if (res.description) setDescriptionHi(res.description);
+        if (res.category) setCategoryHi(res.category);
+        if (res.tags) setTagsHi(Array.isArray(res.tags) ? res.tags.join(', ') : res.tags);
+        if (res.product_name) setProductNameHi(res.product_name);
+        if (res.material) setMaterialHi(res.material);
+        if (res.craft_type) setCraftTypeHi(res.craft_type);
         setActiveTabLang('hi');
       } else {
-        setTitle(res.title || '');
-        setDescription(res.description || '');
-        setCategory(res.category || '');
-        setTags(Array.isArray(res.tags) ? res.tags.join(', ') : res.tags || '');
-        setProductName(res.product_name || productName);
-        setMaterial(res.material || material);
-        setCraftType(res.craft_type || craftType);
+        if (res.title) setTitle(res.title);
+        if (res.description) setDescription(res.description);
+        if (res.category) setCategory(res.category);
+        if (res.tags) setTags(Array.isArray(res.tags) ? res.tags.join(', ') : res.tags);
+        if (res.product_name) setProductName(res.product_name);
+        if (res.material) setMaterial(res.material);
+        if (res.craft_type) setCraftType(res.craft_type);
         setActiveTabLang('en');
       }
     } catch (err) {
