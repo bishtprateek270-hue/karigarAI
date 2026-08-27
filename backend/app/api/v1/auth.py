@@ -100,6 +100,8 @@ def generate_numeric_otp() -> str:
 def request_password_reset_otp(payload: dict, db: Session = Depends(get_db)):
     from datetime import timedelta
     from app.db.models import PasswordResetOTP
+    from app.services.email_service import email_service
+
     email = payload.get("email", "").strip().lower()
     if not email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email address is required.")
@@ -122,13 +124,19 @@ def request_password_reset_otp(payload: dict, db: Session = Depends(get_db)):
     db.add(otp_entry)
     db.commit()
 
-    print(f"[KARIGAR AI OTP SERVICE] OTP for {email} is: {otp_code}")
+    email_sent = email_service.send_otp_email(email, otp_code)
 
-    return {
+    response_data = {
         "status": "success",
-        "message": f"A 6-digit OTP code has been sent to {email}.",
-        "otp": otp_code
+        "email_sent": email_sent,
+        "message": f"A 6-digit OTP code has been sent directly to {email}. Please check your email inbox." if email_sent else f"A 6-digit OTP code has been generated for {email}."
     }
+
+    if not email_sent:
+        response_data["otp"] = otp_code
+        response_data["note"] = "To deliver real emails directly to recipient inboxes, configure SMTP_HOST, SMTP_USER, and SMTP_PASSWORD in backend environment variables."
+
+    return response_data
 
 
 @router.post(

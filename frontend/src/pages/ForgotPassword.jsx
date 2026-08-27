@@ -23,10 +23,16 @@ export const ForgotPassword = ({ lang = 'en' }) => {
     try {
       const res = await api.requestPasswordResetOtp(email.trim());
       setStep(2);
-      setSuccessMsg(lang === 'hi' ? '6-अंकीय ओटीपी कोड आपके ईमेल पर भेजा गया है!' : '6-digit OTP verification code sent to your email!');
-      if (res.otp) {
-        setReceivedOtpInfo(`Verification OTP Code: ${res.otp}`);
-        setOtp(res.otp); // Pre-fill for convenience
+      if (res.email_sent) {
+        setSuccessMsg(lang === 'hi' ? '6-अंकीय ओटीपी आपके ईमेल इनबॉक्स में भेज दिया गया है! कृपया अपना ईमेल जांचें।' : 'A 6-digit OTP code has been sent directly to your email inbox! Please check your email and enter the code below.');
+        setReceivedOtpInfo('');
+        setOtp('');
+      } else {
+        setSuccessMsg(lang === 'hi' ? '6-अंकीय ओटीपी कोड भेजा गया!' : '6-digit OTP code generated!');
+        if (res.otp) {
+          setReceivedOtpInfo(`Demo Testing OTP: ${res.otp}`);
+          setOtp(res.otp);
+        }
       }
     } catch (err) {
       setError(err.message || 'Failed to send OTP. Please check your email address.');

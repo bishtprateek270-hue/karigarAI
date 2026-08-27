@@ -34,6 +34,13 @@ class Settings:
     CLOUDINARY_API_KEY: str = os.getenv("CLOUDINARY_API_KEY", "").strip()
     CLOUDINARY_API_SECRET: str = os.getenv("CLOUDINARY_API_SECRET", "").strip()
 
+    # SMTP Email Configuration
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "").strip()
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "").strip()
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "").strip()
+    EMAILS_FROM_EMAIL: str = os.getenv("EMAILS_FROM_EMAIL", os.getenv("SMTP_USER", "noreply@karigarai.app")).strip()
+    EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "KarigarAI Support").strip()
 
 
 settings = Settings()
