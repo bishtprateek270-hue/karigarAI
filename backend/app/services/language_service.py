@@ -59,15 +59,13 @@ class LanguageService:
         description: str | None,
         category: str | None,
         tags: List[str] | None,
+        product_name: str | None = None,
+        material: str | None = None,
+        craft_type: str | None = None,
         target_language: str = "hi",
     ) -> Dict[str, Any]:
         """
-        Translates catalog fields (title, description, category, tags) into target language ('hi' or 'en').
-        Follows a robust multi-tiered translation strategy:
-        1. Configured Gemini LLM API (if valid API key available)
-        2. Configured OpenAI LLM API (if valid API key available)
-        3. Free Web Translation API (Google Translate GTX endpoint)
-        4. Offline Rule-Based & Dictionary Fallback
+        Translates catalog fields (title, description, category, tags, product_name, material, craft_type) into target language ('hi' or 'en').
         """
         lang = target_language.lower().strip()
         target_code = "hi" if lang in ["hi", "hindi"] else "en"
@@ -78,27 +76,27 @@ class LanguageService:
 
         # Tier 1: Try Gemini LLM if key is present
         if gemini_key and gemini_key != "your_gemini_api_key_here":
-            res = await self._translate_with_gemini(title, description, category, tags, target_name)
+            res = await self._translate_with_gemini(title, description, category, tags, product_name, material, craft_type, target_name)
             if res:
                 logger.info("Catalog translated using Gemini API.")
                 return res
 
         # Tier 2: Try OpenAI LLM if key is present
         if openai_key and openai_key != "your_openai_api_key_here":
-            res = await self._translate_with_openai(title, description, category, tags, target_name)
+            res = await self._translate_with_openai(title, description, category, tags, product_name, material, craft_type, target_name)
             if res:
                 logger.info("Catalog translated using OpenAI API.")
                 return res
 
         # Tier 3: Use Free Web Translation API (Google GTX endpoint)
-        res = await self._translate_with_free_api(title, description, category, tags, target_code)
+        res = await self._translate_with_free_api(title, description, category, tags, product_name, material, craft_type, target_code)
         if res:
             logger.info("Catalog translated using Free Web Translation API.")
             return res
 
         # Tier 4: Final Offline Dictionary Fallback
         logger.info("Using offline dictionary fallback translator.")
-        return self._fallback_translate(title, description, category, tags, target_name)
+        return self._fallback_translate(title, description, category, tags, product_name, material, craft_type, target_name)
 
     async def _translate_with_free_api(
         self,
@@ -106,6 +104,9 @@ class LanguageService:
         description: str | None,
         category: str | None,
         tags: List[str] | None,
+        product_name: str | None,
+        material: str | None,
+        craft_type: str | None,
         target_code: str,
     ) -> Dict[str, Any] | None:
         """
@@ -134,6 +135,9 @@ class LanguageService:
                 t_translated = await _gtx_text(title) if title else ""
                 d_translated = await _gtx_text(description) if description else ""
                 c_translated = await _gtx_text(category) if category else ""
+                pn_translated = await _gtx_text(product_name) if product_name else ""
+                mat_translated = await _gtx_text(material) if material else ""
+                craft_translated = await _gtx_text(craft_type) if craft_type else ""
 
                 tags_translated = []
                 if tags:
@@ -146,6 +150,9 @@ class LanguageService:
                     "description": d_translated or description or "",
                     "category": c_translated or category or "",
                     "tags": tags_translated or tags or [],
+                    "product_name": pn_translated or product_name or "",
+                    "material": mat_translated or material or "",
+                    "craft_type": craft_translated or craft_type or "",
                 }
 
         except Exception as e:
@@ -158,6 +165,9 @@ class LanguageService:
         description: str | None,
         category: str | None,
         tags: List[str] | None,
+        product_name: str | None,
+        material: str | None,
+        craft_type: str | None,
         target_name: str,
     ) -> Dict[str, Any] | None:
         prompt = (
@@ -167,12 +177,18 @@ class LanguageService:
             f"- title: Translated title\n"
             f"- description: Translated description\n"
             f"- category: Translated category hierarchy\n"
-            f"- tags: Array of translated search tags\n\n"
+            f"- tags: Array of translated search tags\n"
+            f"- product_name: Translated product name\n"
+            f"- material: Translated material\n"
+            f"- craft_type: Translated craft type\n\n"
             f"Input Catalog Content:\n"
             f"- title: {title or ''}\n"
             f"- description: {description or ''}\n"
             f"- category: {category or ''}\n"
             f"- tags: {json.dumps(tags or [])}\n"
+            f"- product_name: {product_name or ''}\n"
+            f"- material: {material or ''}\n"
+            f"- craft_type: {craft_type or ''}\n"
         )
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent?key={settings.GEMINI_API_KEY}"
@@ -197,7 +213,7 @@ class LanguageService:
                 .get("text", "")
                 .strip()
             )
-            return self._parse_json_translation(raw_text, title, description, category, tags)
+            return self._parse_json_translation(raw_text, title, description, category, tags, product_name, material, craft_type)
 
         except Exception as e:
             logger.error(f"Gemini translation error: {e}")
@@ -209,12 +225,15 @@ class LanguageService:
         description: str | None,
         category: str | None,
         tags: List[str] | None,
+        product_name: str | None,
+        material: str | None,
+        craft_type: str | None,
         target_name: str,
     ) -> Dict[str, Any] | None:
         system_prompt = (
             f"You are a professional artisan marketplace translator. "
             f"Translate the provided catalog entry into {target_name}. "
-            f"Respond ONLY with a JSON object containing 'title', 'description', 'category', 'tags'."
+            f"Respond ONLY with a JSON object containing 'title', 'description', 'category', 'tags', 'product_name', 'material', 'craft_type'."
         )
 
         user_content = json.dumps({
@@ -222,6 +241,9 @@ class LanguageService:
             "description": description or "",
             "category": category or "",
             "tags": tags or [],
+            "product_name": product_name or "",
+            "material": material or "",
+            "craft_type": craft_type or "",
         })
 
         url = "https://api.openai.com/v1/chat/completions"
@@ -248,13 +270,13 @@ class LanguageService:
 
             data = response.json()
             raw_text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
-            return self._parse_json_translation(raw_text, title, description, category, tags)
+            return self._parse_json_translation(raw_text, title, description, category, tags, product_name, material, craft_type)
 
         except Exception as e:
             logger.error(f"OpenAI translation error: {e}")
             return None
 
-    def _parse_json_translation(self, raw_text: str, orig_title, orig_desc, orig_cat, orig_tags) -> Dict[str, Any] | None:
+    def _parse_json_translation(self, raw_text: str, orig_title, orig_desc, orig_cat, orig_tags, orig_pn=None, orig_mat=None, orig_craft=None) -> Dict[str, Any] | None:
         clean_text = raw_text.replace("```json", "").replace("```", "").strip()
         try:
             parsed = json.loads(clean_text)
@@ -263,16 +285,22 @@ class LanguageService:
                 "description": str(parsed.get("description") or orig_desc or "").strip(),
                 "category": str(parsed.get("category") or orig_cat or "").strip(),
                 "tags": [str(t) for t in parsed.get("tags", [])] if isinstance(parsed.get("tags"), list) else orig_tags,
+                "product_name": str(parsed.get("product_name") or orig_pn or "").strip(),
+                "material": str(parsed.get("material") or orig_mat or "").strip(),
+                "craft_type": str(parsed.get("craft_type") or orig_craft or "").strip(),
             }
         except Exception:
             return None
 
-    def _fallback_translate(self, title, description, category, tags, target_name) -> Dict[str, Any]:
+    def _fallback_translate(self, title, description, category, tags, product_name=None, material=None, craft_type=None, target_name="Hindi") -> Dict[str, Any]:
         """Robust offline rule-based translation fallback with word-boundary awareness."""
         if target_name.lower() in ["hi", "hindi"]:
             t_hi = title or ""
             d_hi = description or ""
             c_hi = category or ""
+            pn_hi = product_name or ""
+            mat_hi = material or ""
+            craft_hi = craft_type or ""
 
             # Sort mappings by word length descending to translate multi-word phrases first
             sorted_mappings = sorted(self.hi_translations_map.items(), key=lambda x: len(x[0]), reverse=True)
@@ -282,6 +310,9 @@ class LanguageService:
                 t_hi = pattern.sub(hi, t_hi)
                 d_hi = pattern.sub(hi, d_hi)
                 c_hi = pattern.sub(hi, c_hi)
+                pn_hi = pattern.sub(hi, pn_hi)
+                mat_hi = pattern.sub(hi, mat_hi)
+                craft_hi = pattern.sub(hi, craft_hi)
 
             # Fallback prefixes if unchanged
             if t_hi == title and title:
@@ -308,6 +339,9 @@ class LanguageService:
                 "description": d_hi,
                 "category": c_hi,
                 "tags": tags_hi,
+                "product_name": pn_hi or product_name or "",
+                "material": mat_hi or material or "",
+                "craft_type": craft_hi or craft_type or "",
             }
         else:
             return {
@@ -315,6 +349,9 @@ class LanguageService:
                 "description": description or "",
                 "category": category or "",
                 "tags": tags or [],
+                "product_name": product_name or "",
+                "material": material or "",
+                "craft_type": craft_type or "",
             }
 
 

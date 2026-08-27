@@ -134,6 +134,9 @@ async def translate_root(req: TranslationRequest):
         description=req.description,
         category=req.category,
         tags=req.tags,
+        product_name=req.product_name,
+        material=req.material,
+        craft_type=req.craft_type,
         target_language=req.target_language,
     )
     return TranslationResponse(
@@ -141,6 +144,9 @@ async def translate_root(req: TranslationRequest):
         description=translated.get("description"),
         category=translated.get("category"),
         tags=translated.get("tags"),
+        product_name=translated.get("product_name"),
+        material=translated.get("material"),
+        craft_type=translated.get("craft_type"),
         target_language=req.target_language,
     )
 

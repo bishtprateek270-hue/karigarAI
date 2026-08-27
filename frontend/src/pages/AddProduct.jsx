@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, Languages, CheckCircle } from 'lucide-react';
+import { UploadCloud, Sparkles, DollarSign, Save, Image as ImageIcon, Languages } from 'lucide-react';
 
 export const AddProduct = ({ lang = 'en' }) => {
   const navigate = useNavigate();
@@ -11,12 +11,17 @@ export const AddProduct = ({ lang = 'en' }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Step 2: Artisan-Provided Product & Production Cost Inputs
+  // Step 2: Artisan-Provided Product Details (English State)
   const [productName, setProductName] = useState('');
   const [material, setMaterial] = useState('');
   const [craftType, setCraftType] = useState('');
   const [productSize, setProductSize] = useState('medium');
   const [basicDescription, setBasicDescription] = useState('');
+
+  // Artisan-Provided Product Details (Hindi State)
+  const [productNameHi, setProductNameHi] = useState('');
+  const [materialHi, setMaterialHi] = useState('');
+  const [craftTypeHi, setCraftTypeHi] = useState('');
 
   // Production Cost & Labor Inputs
   const [materialCost, setMaterialCost] = useState(300);
@@ -29,7 +34,7 @@ export const AddProduct = ({ lang = 'en' }) => {
   const [catalogGenerated, setCatalogGenerated] = useState(false);
   const [error, setError] = useState('');
 
-  // Step 3: AI Generated & Editable Catalog State (English & Hindi)
+  // Step 3: AI Generated Catalog State (English & Hindi)
   const [activeTabLang, setActiveTabLang] = useState(lang);
   const [translating, setTranslating] = useState(false);
 
@@ -74,6 +79,9 @@ export const AddProduct = ({ lang = 'en' }) => {
     setDescriptionHi('');
     setCategoryHi('');
     setTagsHi('');
+    setProductNameHi('');
+    setMaterialHi('');
+    setCraftTypeHi('');
     setPriceTiers(null);
     setSuggestedPrice('');
     setError('');
@@ -123,7 +131,11 @@ export const AddProduct = ({ lang = 'en' }) => {
 
   // Generate Professional Catalog & Price Recommendation
   const handleGenerateCatalogAndPrice = async () => {
-    if (!productName || !material || !craftType) {
+    const activeName = activeTabLang === 'hi' ? (productNameHi || productName) : productName;
+    const activeMat = activeTabLang === 'hi' ? (materialHi || material) : material;
+    const activeCraft = activeTabLang === 'hi' ? (craftTypeHi || craftType) : craftType;
+
+    if (!activeName || !activeMat || !activeCraft) {
       setError('Please fill in Product Name, Material, and Craft Type first.');
       return;
     }
@@ -134,9 +146,9 @@ export const AddProduct = ({ lang = 'en' }) => {
     try {
       // 1. Call Catalog Generation API with Artisan Facts
       const catalogPayload = {
-        product_name: productName,
-        material: material,
-        craft_type: craftType,
+        product_name: activeName,
+        material: activeMat,
+        craft_type: activeCraft,
         product_size: productSize,
         basic_description: basicDescription,
       };
@@ -144,7 +156,7 @@ export const AddProduct = ({ lang = 'en' }) => {
       const catalogRes = await api.generateCatalog(catalogPayload);
       const cat = catalogRes.catalog || catalogRes;
 
-      setTitle(cat.title || `Handcrafted ${productName}`);
+      setTitle(cat.title || `Handcrafted ${activeName}`);
       setDescription(cat.description || basicDescription);
       setCategory(cat.category || 'Home & Living > Handcrafted Products');
       setTags(Array.isArray(cat.tags) ? cat.tags.join(', ') : cat.tags || '');
@@ -155,7 +167,7 @@ export const AddProduct = ({ lang = 'en' }) => {
         making_time_hours: parseFloat(makingHours) || 0,
         hourly_rate: parseFloat(hourlyRate) || 0,
         product_size: productSize,
-        craft_category: craftType,
+        craft_category: activeCraft,
         profit_margin: parseFloat(profitMargin) || 25,
       };
 
@@ -177,30 +189,54 @@ export const AddProduct = ({ lang = 'en' }) => {
     setError('');
 
     try {
-      const sourceCatalog = {
-        title: title || titleHi,
-        description: description || descriptionHi,
-        category: category || categoryHi,
-        tags: (tags || tagsHi).split(',').map(t => t.trim()).filter(Boolean),
-      };
+      let payload;
+      if (targetLang === 'hi') {
+        payload = {
+          title: title || titleHi,
+          description: description || basicDescription,
+          category: category || categoryHi,
+          tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+          product_name: productName,
+          material: material,
+          craft_type: craftType,
+          target_language: 'hi',
+        };
+      } else {
+        payload = {
+          title: titleHi || title,
+          description: descriptionHi || description,
+          category: categoryHi || category,
+          tags: tagsHi ? tagsHi.split(',').map(t => t.trim()).filter(Boolean) : [],
+          product_name: productNameHi || productName,
+          material: materialHi || material,
+          craft_type: craftTypeHi || craftType,
+          target_language: 'en',
+        };
+      }
 
-      const res = await api.translate(sourceCatalog, targetLang);
+      const res = await api.translate(payload, targetLang);
 
       if (targetLang === 'hi') {
         setTitleHi(res.title || '');
         setDescriptionHi(res.description || '');
         setCategoryHi(res.category || '');
         setTagsHi(Array.isArray(res.tags) ? res.tags.join(', ') : res.tags || '');
+        setProductNameHi(res.product_name || '');
+        setMaterialHi(res.material || '');
+        setCraftTypeHi(res.craft_type || '');
         setActiveTabLang('hi');
       } else {
         setTitle(res.title || '');
         setDescription(res.description || '');
         setCategory(res.category || '');
         setTags(Array.isArray(res.tags) ? res.tags.join(', ') : res.tags || '');
+        setProductName(res.product_name || productName);
+        setMaterial(res.material || material);
+        setCraftType(res.craft_type || craftType);
         setActiveTabLang('en');
       }
     } catch (err) {
-      setError(err.message || 'Translation failed.');
+      setError(err.message || 'Translation service failed to respond. Please try again.');
     } finally {
       setTranslating(false);
     }
@@ -226,8 +262,8 @@ export const AddProduct = ({ lang = 'en' }) => {
         title: title || titleHi,
         description: description || basicDescription,
         category,
-        material,
-        craft_type: craftType,
+        material: material || materialHi,
+        craft_type: craftType || craftTypeHi,
         tags: tagsArray,
         title_hi: titleHi || null,
         description_hi: descriptionHi || null,
@@ -281,7 +317,7 @@ export const AddProduct = ({ lang = 'en' }) => {
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
               }}
-              onClick={() => document.getElementById('craft-image-input-ph9').click()}
+              onClick={() => document.getElementById('craft-image-input-ph10').click()}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -309,7 +345,7 @@ export const AddProduct = ({ lang = 'en' }) => {
                 </div>
               )}
               <input
-                id="craft-image-input-ph9"
+                id="craft-image-input-ph10"
                 type="file"
                 accept=".jpg,.jpeg,.png"
                 onChange={handleFileChange}
@@ -325,49 +361,89 @@ export const AddProduct = ({ lang = 'en' }) => {
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div className="form-group">
-                <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>
-                  {lang === 'hi' ? 'उत्पाद का नाम (Product Name) *' : 'Product Name *'}
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Handmade Terracotta Pottery Vase"
-                  value={productName}
-                  onChange={(e) => setProductName(e.target.value)}
-                  required
-                />
-              </div>
+              {activeTabLang === 'hi' ? (
+                /* Hindi Fields */
+                <>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>उत्पाद का नाम (Product Name - Hindi) *</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="उदा. हस्तनिर्मित मिट्टी का फूलदान"
+                      value={productNameHi}
+                      onChange={(e) => setProductNameHi(e.target.value)}
+                      required
+                    />
+                  </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div className="form-group">
-                  <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>
-                    {lang === 'hi' ? 'सामग्री (Material) *' : 'Material *'}
-                  </label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. Terracotta Clay, Wood"
-                    value={material}
-                    onChange={(e) => setMaterial(e.target.value)}
-                    required
-                  />
-                </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>सामग्री (Material - Hindi) *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="उदा. मिट्टी"
+                        value={materialHi}
+                        onChange={(e) => setMaterialHi(e.target.value)}
+                        required
+                      />
+                    </div>
 
-                <div className="form-group">
-                  <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>
-                    {lang === 'hi' ? 'हस्तशिल्प (Craft Type) *' : 'Craft Type *'}
-                  </label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. Pottery, Wood Carving"
-                    value={craftType}
-                    onChange={(e) => setCraftType(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>हस्तशिल्प (Craft Type - Hindi) *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="उदा. मिट्टी के बर्तन की कला"
+                        value={craftTypeHi}
+                        onChange={(e) => setCraftTypeHi(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* English Fields */
+                <>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>Product Name (English) *</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Handmade Terracotta Pottery Vase"
+                      value={productName}
+                      onChange={(e) => setProductName(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>Material (English) *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Terracotta Clay, Wood"
+                        value={material}
+                        onChange={(e) => setMaterial(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>Craft Type (English) *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Pottery, Wood Carving"
+                        value={craftType}
+                        onChange={(e) => setCraftType(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div className="form-group">
@@ -457,7 +533,7 @@ export const AddProduct = ({ lang = 'en' }) => {
                 onClick={handleGenerateCatalogAndPrice}
                 className="btn-primary"
                 style={{ width: '100%', padding: '12px', marginTop: '8px', fontSize: '0.95rem' }}
-                disabled={generatingCatalog || !productName || !material || !craftType}
+                disabled={generatingCatalog || (!productName && !productNameHi)}
               >
                 {generatingCatalog ? (
                   <>
