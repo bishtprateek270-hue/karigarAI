@@ -64,6 +64,6 @@ class ProductAnalysisResponse(BaseModel):
     filename: str = Field(..., example="craft_item.jpg")
     content_type: str = Field(..., example="image/jpeg")
     analysis: ProductVisionDetails
-    catalog: ProductCatalogDetails
+    catalog: Optional[ProductCatalogDetails] = None
     image_url: Optional[str] = Field(None, example="https://res.cloudinary.com/demo/image/upload/sample.jpg")
 
